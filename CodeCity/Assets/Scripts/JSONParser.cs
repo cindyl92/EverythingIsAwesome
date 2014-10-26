@@ -1,13 +1,16 @@
 using SimpleJSON;
 using System;
 using System.Collections;
+using System.Collections.Generic;
+using System.Net;
+using System.IO;
 
-public class JSONParser
+namespace  AssemblyCSharpvs 
 {
 
-	//Right now this is designed to parse 1 java file
-	//Will need to expand once we have the JSON Aggregator to combine all files into one giant JSON file to read
-
+//This class will take the JSON data from JSONCombiner.cs and parse it to get the class with most coupling and the linesOfCode for that class, which will be passed into the visualizer
+public class JSONParser
+{
 
 	//This method will read a list of all the types in the project and the json data for a particular file and output
 	//a list of all the classes that have coupling with it
@@ -15,6 +18,8 @@ public class JSONParser
 		SimpleJSON.JSONNode N = SimpleJSON.JSONNode.Parse (jsonData);
 
 		ArrayList coupledClasses = new ArrayList ();
+		ArrayList coupledCounts = new ArrayList ();
+
 		string className = N ["name"].Value;
 
 		int numberOfFields = N ["fields"].Count;
@@ -24,10 +29,18 @@ public class JSONParser
 		{
 			string fieldType = N["fields"][i]["simpleTypeName"].Value;
 			//If the type of the field is not equal to the className and it is another class in the project, then we have coupling
-			if (fieldType != className && allTypes.Contains(fieldType) && !coupledClasses.Contains(fieldType)) 
+			if (fieldType != className && allTypes.Contains(fieldType)) 
 			{
-				//Add that fieldType to the array so we know this class has coupling with that type
-				coupledClasses.Add(fieldType);
+				//If the class has a coupling instance already, increase the couple count
+				if (coupledClasses.Contains(fieldType)){
+					int index = coupledClasses.IndexOf(fieldType);
+					int value = (int) coupledCounts[index];
+					coupledCounts[index] = value++;
+				//otherwise add it to the array and init its count to 1
+				}else{
+					coupledClasses.Add(fieldType);
+					coupledCounts.Add(1);
+				}
 			}
 		}
 
@@ -36,21 +49,58 @@ public class JSONParser
 			string paramType = N["methods"][j]["paramName"].Value;
 			string returnType = N["methods"][j]["returnName"].Value;
 			//If the type of the field is not equal to the className and it is another class in the project, then we have coupling
-			if (paramType != className && allTypes.Contains(paramType) && !coupledClasses.Contains(paramType)) 
+			if (paramType != className && allTypes.Contains(paramType)) 
 			{
-				//Add that paramType to the array so we know this class has coupling with that type
-				coupledClasses.Add (paramType);
+				//If the class has a coupling instance already, increase the couple count
+				if (coupledClasses.Contains(paramType)){
+					int index = coupledClasses.IndexOf(paramType);
+					int value = (int) coupledCounts[index];
+					coupledCounts[index] = value++;
+					//otherwise add it to the array and init its count to 1
+				}else{
+					coupledClasses.Add(paramType);
+					coupledCounts.Add(1);
+				}
 			}
 
-			if (returnType != className && allTypes.Contains(returnType) && !coupledClasses.Contains(returnType)) 
+			if (returnType != className && allTypes.Contains(returnType)) 
 			{
-				//Add that returnType to the array so we know this class has coupling with that type
-				coupledClasses.Add(returnType);
+				//If the class has a coupling instance already, increase the couple count
+				if (coupledClasses.Contains(returnType)){
+					int index = coupledClasses.IndexOf(returnType);
+					int value = (int) coupledCounts[index];
+					coupledCounts[index] = value++;
+					//otherwise add it to the array and init its count to 1
+				}else{
+					coupledClasses.Add(returnType);
+					coupledCounts.Add(1);
+				}
 			}
 		}
 
-		//Returns an arraylist with all the classes that this class is coupled with 
-		return coupledClasses;
+		int maxCount = 0;
+
+		foreach (int i in coupledCounts) {
+						if (i > maxCount) {
+								maxCount = i;
+						}
+				}
+
+		int indexOfMax = coupledCounts.IndexOf (maxCount);
+
+		string maxCoupledClass = (string) coupledClasses[indexOfMax];
+
+
+		ArrayList result = new ArrayList();
+
+		result.Add (className);
+		result.Add (maxCoupledClass);
+		result.Add (maxCount);
+		result.Add (parseForLineCount (jsonData));
+
+		//Returns an array with 4 fields: [0] = class name, [1] = name of most coupled class, [2] = number of times its coupled with that class, [3] = line count 
+		return result;
+
 
 	}
 
@@ -61,10 +111,31 @@ public class JSONParser
 
 		//This will return the line number of the last method in the code
 		//While this is not the most accurate line count, it gives us a rough idea of the lines of code temporaily before we complete a full LoC counter
+
+		//once we have the proper line parser from Kevin, we can use the following code:
+		//return N ["linesOfCode"][0]["lines"].Value;
+
 		return N ["methods"] [numberOfMethods - 1] ["line"].AsInt;
 	}
 
-	
+	void Start() {
+		Console.WriteLine ("testing console");
+
+		string mockFilePath = "http://google-guice.googlecode.com/svn/trunk/core/src/com/google/inject/Key.java";
+			
+		string mockLocJSON = "linesOfCode";
+
+		JSONCombiner combiner = new JSONCombiner (mockFilePath, mockLocJSON);
+			combiner.JSONRequester ();
+			string jsonData = combiner.combinedJSONData (combiner.japarserData);
+
+			ArrayList mockAllTypes = new ArrayList{"Instrumentation", "ActivityMonitor", "Activity", "Sleeper", "Timer"};
+			ArrayList result = this.parseforCoupling (mockAllTypes, jsonData);
+
+			Console.WriteLine (result);
+		}
+
+	}
 }
 
 
