@@ -1,11 +1,11 @@
 ﻿<Properties>
-  <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
+  <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" PreferredExecutionTarget="MonoDevelop.Default" />
   <MonoDevelop.Ide.Workbench ActiveDocument="Assets\Scripts\CustomParser.cs">
     <Files>
-      <File FileName="Assets\Scripts\CustomParser.cs" Line="10" Column="3" />
-      <File FileName="Assets\Scripts\BuildingHeight.cs" Line="13" Column="13" />
-      <File FileName="Assets\Scripts\JSONCombiner.cs" Line="18" Column="3" />
-      <File FileName="Assets\Scripts\JSONParser.cs" Line="7" Column="1" />
+      <File FileName="Assets\Scripts\CustomParser.cs" Line="1" Column="1" />
+      <File FileName="Assets\Scripts\BuildingHeight.cs" Line="1" Column="1" />
+      <File FileName="Assets\Scripts\JSONCombiner.cs" Line="1" Column="1" />
+      <File FileName="Assets\Scripts\JSONParser.cs" Line="1" Column="1" />
     </Files>
   </MonoDevelop.Ide.Workbench>
   <MonoDevelop.Ide.DebuggingService.Breakpoints>
