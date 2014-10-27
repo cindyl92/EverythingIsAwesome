@@ -9,17 +9,15 @@ namespace AssemblyCSharpvs
 	class CustomParser
 	{
 		string filePath;
-		string customJSON;
+		string customJSON; //generate JSON with dependency in Sprint 2
 
-
+		//constructor
 		public CustomParser(string filePath) {	
 			this.filePath = filePath;	
 		}
 
-
-
 		public int createLOCJSON(){
-			///code below inspired by http://msdn.microsoft.com/en-us/library/system.io.streamreader.readline%28v=vs.110%29.aspx
+			///line counter inspiration: http://msdn.microsoft.com/en-us/library/system.io.streamreader.readline%28v=vs.110%29.aspx
 
 			string stringProbe;
 			int locCounter = 0;
@@ -35,34 +33,38 @@ namespace AssemblyCSharpvs
 						stringProbe = sr.ReadLine(); //reads in the next line from text
 						stringProbe = stringProbe.Trim(); //removes all leading and trailing white space from a line
 						
-						if (stringProbe.Length > 1){ //this assumes that lines with only a } don't count
-							
+						if (stringProbe.Length > 1){ //this will ignore lines of code that only contain one '}'
+
+							//if the line being read is the end of a block comment, then set inBlockComment to false
 							if ((stringProbe[(stringProbe.Length)-2] == '*') && (stringProbe[(stringProbe.Length)-1] == '/'))
-							{ //if the block comment terminates, then inBlockComment = false
-								//Console.WriteLine("second to last char = " + stringProbe[stringProbe.Length - 2]);
-								//Console.WriteLine("last char = " + stringProbe[stringProbe.Length-1]);
+							{
 								inBlockComment = false;
 								locCounter--;
 							}
-							
+
+							//if line being read is the start of a line comment, then set inLineComment to true
 							if ((stringProbe[0] == '/') && (stringProbe[1] == '/'))
 							{ //if the line starts with a comment
 								inLineComment = true;
 							}
-							
+
+							//if line being read is the start of a block comment, then set inBlockComment to true
 							if ((stringProbe[0] == '/') && (stringProbe[1] == '*'))
 							{
 								inBlockComment = true;
 							}
-							
+
+
+							//if line being read is neither an inline comment nor in a block comment, then increment locCounter
 							if ((!inLineComment) && (!inBlockComment))
-							{ //if the line is not blank, then add to counter.
-								Console.WriteLine(stringProbe);
+							{
+								Console.WriteLine(stringProbe); //debug only
 								locCounter++;
 								inLineComment = false;
 								inBlockComment = false;
 							}
 						}
+						//inline comments end at end of line, so set inLineComment to false before next line read
 						inLineComment = false;
 					}
 				}
@@ -71,11 +73,11 @@ namespace AssemblyCSharpvs
 			{
 				Console.WriteLine("The process failed: {0}", e.ToString());
 			}
-			
+
+			//replace with JSON 
 			return locCounter;
 		}
 			
-
 		void Start(){
 
 			string mockFilePath = @"C:\Users\Kevin\Desktop\textTest20.txt";
