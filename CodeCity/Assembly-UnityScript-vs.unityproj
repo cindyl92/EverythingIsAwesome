@@ -5,11 +5,11 @@
 	<Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
 	<ProductVersion>10.0.20506</ProductVersion>
 	<SchemaVersion>2.0</SchemaVersion>
-	<ProjectGuid>{9EF9B23C-EF76-73B8-6522-0239BEC4D639}</ProjectGuid>
+	<ProjectGuid>{D8A8B833-2322-4912-95D9-A82550C9F35D}</ProjectGuid>
 	<OutputType>Library</OutputType>
 	<AppDesignerFolder>Properties</AppDesignerFolder>
 	<RootNamespace></RootNamespace>
-	<AssemblyName>Assembly-CSharp</AssemblyName>
+	<AssemblyName>Assembly-UnityScript</AssemblyName>
 	<TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
 	<FileAlignment>512</FileAlignment>
 	<BaseDirectory>Assets</BaseDirectory>
@@ -46,10 +46,7 @@
 	</Reference>
   </ItemGroup>
   <ItemGroup>
-     <Compile Include="Assets\Scripts\BuildingHeight.cs" />
-     <Compile Include="Assets\Scripts\CustomParser.cs" />
-     <Compile Include="Assets\Scripts\JSONCombiner.cs" />
-     <Compile Include="Assets\Scripts\JSONParser.cs" />
+     <Compile Include="Assets\Scripts\Decomposer.js" />
  <Reference Include="JsonFx.Json">
  <HintPath>/Users/Cindy/Desktop/EverythingIsAwesome/CodeCity/Assets/Plugins/JsonFx.Json.dll</HintPath>
  </Reference>
