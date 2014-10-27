@@ -123,9 +123,13 @@ public class JSONParser
 
 		string mockFilePath = "http://google-guice.googlecode.com/svn/trunk/core/src/com/google/inject/Key.java";
 			
-		string mockLocJSON = "linesOfCode";
-
-		JSONCombiner combiner = new JSONCombiner (mockFilePath, mockLocJSON);
+			//Integrating with Custom Parser Component:
+			CustomParser customParser = new CustomParser (mockFilePath);
+			int linesOfCode = customParser.createLOCJSON ();
+			string mockLocJSON = "linesOfCode:[{lines:"+linesOfCode+"}]";
+			
+			//Integrating with Japarser Component (JSONCombiner)
+			JSONCombiner combiner = new JSONCombiner (mockFilePath, mockLocJSON);
 			combiner.JSONRequester ();
 			string jsonData = combiner.combinedJSONData (combiner.japarserData);
 

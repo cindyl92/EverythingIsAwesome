@@ -5,6 +5,7 @@ public class BuildingHeight : MonoBehaviour {
 	public GameObject plane;
 	public GameObject mainCamera;
 
+	//Mock Objects
 	int numBuildings = 4;
 	float[] bases = new float[] {0, 1, 2, 0};
 	float[] heights = new float[] {10f, 5f, 4f, 12f};

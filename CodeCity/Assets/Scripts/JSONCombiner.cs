@@ -71,8 +71,11 @@ namespace AssemblyCSharpvs
 			
 			string mockFilePath = "http://google-guice.googlecode.com/svn/trunk/core/src/com/google/inject/Key.java";
 			
-			string mockLocJSON = "linesOfCode";
-			
+			//Integrating with Custom Parser Component:
+			CustomParser customParser = new CustomParser (mockFilePath);
+			int linesOfCode = customParser.createLOCJSON ();
+			string mockLocJSON = "linesOfCode:[{lines:"+linesOfCode+"}]";
+
 			JSONCombiner combiner = new JSONCombiner(mockFilePath, mockLocJSON);
 			combiner.JSONRequester();
 			
