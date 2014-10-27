@@ -17,7 +17,7 @@ namespace AssemblyCSharpvs
 		}
 
 		public int createLOCJSON(){
-			///line counter inspiration: http://msdn.microsoft.com/en-us/library/system.io.streamreader.readline%28v=vs.110%29.aspx
+			///StreamReader implementation inspired by: http://msdn.microsoft.com/en-us/library/system.io.streamreader.readline%28v=vs.110%29.aspx
 
 			string stringProbe;
 			int locCounter = 0;
