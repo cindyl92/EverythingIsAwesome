@@ -5,25 +5,35 @@ public class BuildingHeight : MonoBehaviour {
 	public GameObject plane;
 	public GameObject mainCamera;
 
-<<<<<<< Updated upstream
-	//Mock Objects
-=======
-	//string[,] str = new string[,] {{ClassA, 120, CouplingClassB, 123, CoupClassC, 342, CoupClassD, 324}, ...  
+	// input format
+	// string[,] javaClasses = new string[,] {{ClassA, 120, CouplingClassB, 123}, {ClassC, 342, CouplingClassD, 324}, ... }
+	//  {Class, # Lines of Code, Coupling Class, # of couplings}
 
->>>>>>> Stashed changes
-	int numBuildings = 4;
-	float[] bases = new float[] {0, 1, 2, 0};
-	float[] heights = new float[] {10f, 5f, 4f, 12f};
-	float[,] positions = new float[,] {{0,0}, {3,1}, {5,3}, {8,2}};
-	// http://answers.unity3d.com/questions/209573/how-to-change-material-color-of-an-object.html
-	Color[] colours = new Color[]{Color.green, Color.blue, Color.red, Color.yellow};
 	
+	int numBuildings;
+	float[] bases;
+	float[] heights;
+	float[,] positions;
+	Color[] colours;
+
 	void Start () {
 		float planeX = 0;
 		float planeY = 0;
 		float planeZ = 0;
 
+		// arrangeBuildings(javaClasses);
+
+		// Mock Objects
+		// for placing and scaling the buildings
+		numBuildings = 4;
+		bases = new float[] {0, 1, 2, 0};
+		heights = new float[] {10f, 5f, 4f, 12f};
+		positions = new float[,] {{0,0}, {3,1}, {5,3}, {8,2}};
+
+		colours = new Color[]{Color.green, Color.blue, Color.red, Color.yellow};
+
 		// Instantiate example from : http://docs.unity3d.com/Manual/InstantiatingPrefabs.html
+		// instantiate building objects and apply building position, scale (height and bases), and colour
 		for (int x = 0; x < numBuildings; x++) {
 			GameObject building = GameObject.CreatePrimitive(PrimitiveType.Cube);
 
@@ -49,8 +59,17 @@ public class BuildingHeight : MonoBehaviour {
 		// place main camera to show all the buildings
 		mainCamera.transform.position = new Vector3 (planeX / 2, planeY / 2, -14);
 	}
+	
+	void arrangeBuildings (string[,] javaClasses) {
+		//  numBuildings = javaClasses.getLength(0);
 
-	void Update () {	
-		//capsule.transform.position = Vector3.up * Time.time;
+		// for (int x = 0; x<numBuildings; x++){
+		//  sets:
+		//   - bases
+		//   - heights
+		//   - positions
+		// }
 	}
+
+	void Update () {}
 }
