@@ -4,13 +4,10 @@ using System.Collections;
 public class BuildingHeight : MonoBehaviour {
 	public GameObject plane;
 	public GameObject mainCamera;
-
-<<<<<<< Updated upstream
+	
 	//Mock Objects
-=======
 	//string[,] str = new string[,] {{ClassA, 120, CouplingClassB, 123, CoupClassC, 342, CoupClassD, 324}, ...  
 
->>>>>>> Stashed changes
 	int numBuildings = 4;
 	float[] bases = new float[] {0, 1, 2, 0};
 	float[] heights = new float[] {10f, 5f, 4f, 12f};

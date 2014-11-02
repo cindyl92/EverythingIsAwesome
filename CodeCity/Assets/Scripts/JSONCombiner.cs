@@ -2,23 +2,24 @@ using System;
 using System.Collections;
 using System.Net;
 using System.IO;
+using UnityEngine;
 
 namespace AssemblyCSharpvs
 	
 {
 	//This class will combine the data from the custom and LoC parser with the data from japarser web request
 	//The output of this class will be used by JSONParser.cs to get the coupling and lines of code, which will pass into the visualization
-	public class JSONCombiner
+	public class JSONCombiner: MonoBehaviour
 	{
 		
 		string filePath;
-		string locData;
+		int linesOfCode;
 		public string japarserData;
 		
-		public JSONCombiner(string filePath, string locData) {
+		public JSONCombiner(string filePath, int linesOfCode) {
 			
 			this.filePath = filePath;
-			this.locData = locData;
+			this.linesOfCode = linesOfCode;
 			
 		}
 		
@@ -61,11 +62,15 @@ namespace AssemblyCSharpvs
 		
 		//Takes in two strings of data in JSON format from the LoC/custom parser and data from jparser 
 		//Returns a combined JSON string
-		public String combinedJSONData (string japarserData){
-			
-			return String.Concat (locData, japarserData);
-			
-		}
+//		public String getLinesOfCode (string){
+//			
+//			return String.Concat (locData, japarserData);
+//			
+//		}
+
+		public int getLinesOfCode() {
+				return linesOfCode;
+			}
 		
 		void Start(){
 			
@@ -74,12 +79,14 @@ namespace AssemblyCSharpvs
 			//Integrating with Custom Parser Component:
 			CustomParser customParser = new CustomParser (mockFilePath);
 			int linesOfCode = customParser.createLOCJSON ();
-			string mockLocJSON = "linesOfCode:[{lines:"+linesOfCode+"}]";
 
-			JSONCombiner combiner = new JSONCombiner(mockFilePath, mockLocJSON);
+			//Debug.Log ("testing log");
+
+			JSONCombiner combiner = new JSONCombiner(mockFilePath, linesOfCode);
 			combiner.JSONRequester();
 			
-			Console.WriteLine(combiner.combinedJSONData(combiner.japarserData));
+			//Debug.Log(combiner.JSONRequester());
+			//Debug.Log(combiner.getLinesOfCode());
 			
 			
 		}

@@ -4,12 +4,13 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Net;
 using System.IO;
+using UnityEngine;
 
 namespace  AssemblyCSharpvs 
 {
 
 //This class will take the JSON data from JSONCombiner.cs and parse it to get the class with most coupling and the linesOfCode for that class, which will be passed into the visualizer
-public class JSONParser
+public class JSONParser :MonoBehaviour
 {
 
 	//This method will read a list of all the types in the project and the json data for a particular file and output
@@ -21,9 +22,14 @@ public class JSONParser
 		ArrayList coupledCounts = new ArrayList ();
 
 		string className = N ["name"].Value;
+		
+			//Debug.Log ("class name: " + className);
 
 		int numberOfFields = N ["fields"].Count;
 		int numberOfMethods = N ["methods"].Count;
+
+			//Debug.Log ("field count: " + numberOfFields);
+			//Debug.Log ("method count: " + numberOfMethods);
 
 		for (int i = 0; i< numberOfFields; i++)
 		{
@@ -35,6 +41,7 @@ public class JSONParser
 				if (coupledClasses.Contains(fieldType)){
 					int index = coupledClasses.IndexOf(fieldType);
 					int value = (int) coupledCounts[index];
+					if (index >= 0)
 					coupledCounts[index] = value++;
 				//otherwise add it to the array and init its count to 1
 				}else{
@@ -44,10 +51,13 @@ public class JSONParser
 			}
 		}
 
+			//Debug.Log ("coupledCounts counts after fields loop: "+coupledCounts.Capacity);
+
 		for (int j = 0; j< numberOfMethods; j++)
 		{
 			string paramType = N["methods"][j]["paramName"].Value;
 			string returnType = N["methods"][j]["returnName"].Value;
+				//Debug.Log("returnType: "+returnType);
 			//If the type of the field is not equal to the className and it is another class in the project, then we have coupling
 			if (paramType != className && allTypes.Contains(paramType)) 
 			{
@@ -55,6 +65,7 @@ public class JSONParser
 				if (coupledClasses.Contains(paramType)){
 					int index = coupledClasses.IndexOf(paramType);
 					int value = (int) coupledCounts[index];
+					if (index >= 0)
 					coupledCounts[index] = value++;
 					//otherwise add it to the array and init its count to 1
 				}else{
@@ -65,19 +76,27 @@ public class JSONParser
 
 			if (returnType != className && allTypes.Contains(returnType)) 
 			{
+					//Debug.Log("inside first if");
 				//If the class has a coupling instance already, increase the couple count
 				if (coupledClasses.Contains(returnType)){
 					int index = coupledClasses.IndexOf(returnType);
 					int value = (int) coupledCounts[index];
-					coupledCounts[index] = value++;
+						Debug.Log("inside second if, old value is:"+value);
+					if (index >= 0){
+					coupledCounts[index] = value + 1;
+						}
+
+						//Debug.Log("inside second if, new value is:"+coupledCounts[index]);
 					//otherwise add it to the array and init its count to 1
 				}else{
 					coupledClasses.Add(returnType);
 					coupledCounts.Add(1);
+						//Debug.Log("inside else of second if");
 				}
 			}
 		}
 
+			//Debug.Log ("coupledCounts counts after methods loop: "+coupledCounts.Capacity);
 		int maxCount = 0;
 
 		foreach (int i in coupledCounts) {
@@ -86,10 +105,20 @@ public class JSONParser
 						}
 				}
 
+//			Debug.Log ("maxCount: "+maxCount);
+//
+//			for (int i = 0; i<coupledCounts.Capacity; i++) {
+//				Debug.Log ("coupledCounts at index"+ i +"is: "+coupledCounts[i]);
+//				Debug.Log ("coupledClasses at index"+ i +"is: "+coupledClasses[i]);
+//						}
+
 		int indexOfMax = coupledCounts.IndexOf (maxCount);
+
+			//Debug.Log ("indexOfMax"+indexOfMax);
 
 		string maxCoupledClass = (string) coupledClasses[indexOfMax];
 
+			//Debug.Log ("maxCoupledClass is: " + maxCoupledClass);
 
 		ArrayList result = new ArrayList();
 
@@ -126,17 +155,21 @@ public class JSONParser
 			//Integrating with Custom Parser Component:
 			CustomParser customParser = new CustomParser (mockFilePath);
 			int linesOfCode = customParser.createLOCJSON ();
-			string mockLocJSON = "linesOfCode:[{lines:"+linesOfCode+"}]";
-			
-			//Integrating with Japarser Component (JSONCombiner)
-			JSONCombiner combiner = new JSONCombiner (mockFilePath, mockLocJSON);
-			combiner.JSONRequester ();
-			string jsonData = combiner.combinedJSONData (combiner.japarserData);
 
-			ArrayList mockAllTypes = new ArrayList{"Instrumentation", "ActivityMonitor", "Activity", "Sleeper", "Timer"};
+			//Debug.Log("linesOfCode from customParser is: "+linesOfCode);
+
+			//Integrating with Japarser Component (JSONCombiner)
+			JSONCombiner combiner = new JSONCombiner (mockFilePath, linesOfCode);
+			string jsonData = combiner.JSONRequester ();
+
+			//Debug.Log("jsonData: "+jsonData);
+
+			ArrayList mockAllTypes = new ArrayList{"Key<Provider<T>>", "Key<T>", "Key<?>", "AnnotationStrategy", "TypeLiteral<T>"};
 			ArrayList result = this.parseforCoupling (mockAllTypes, jsonData);
 
-			Console.WriteLine (result);
+//			for (int i = 0; i< result.Capacity; i++){
+//			Debug.Log (result[i]);
+//			}
 		}
 
 	}

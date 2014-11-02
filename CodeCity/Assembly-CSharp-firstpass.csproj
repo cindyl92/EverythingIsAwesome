@@ -48,7 +48,7 @@
   <ItemGroup>
      <Compile Include="Assets\Plugins\SimpleJSON.cs" />
  <Reference Include="JsonFx.Json">
- <HintPath>/Users/Cindy/Desktop/EverythingIsAwesome/CodeCity/Assets/Plugins/JsonFx.Json.dll</HintPath>
+ <HintPath>/Users/bruce_li_94/Documents/EverythingIsAwesome3/CodeCity/Assets/Plugins/JsonFx.Json.dll</HintPath>
  </Reference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
