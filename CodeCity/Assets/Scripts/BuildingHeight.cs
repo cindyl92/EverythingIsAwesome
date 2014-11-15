@@ -12,6 +12,8 @@ public class BuildingHeight : MonoBehaviour {
 		{"ClassC", "342", "ClassD", "324", "50", "PackageA"},
 		{"ClassB", "13", "ClassA", "1005", "2", "PackageA"},
 		{"ClassD", "13", "ClassC", "72", "30", "PackageA"}};
+	// string[,] javaClasses = new string[,] {{ClassA, 120, CouplingClassB, 123}, {ClassC, 342, CouplingClassD, 324}, ... }
+	//  {Class, # Lines of Code, Coupling Class, # of couplings}
 	
 	int numBuildings;
 	float[] bases;
