@@ -9,17 +9,17 @@ namespace AssemblyCSharpvs
 {
 	//This class will combine the data from the custom and LoC parser with the data from japarser web request
 	//The output of this class will be used by JSONParser.cs to get the coupling and lines of code, which will pass into the visualization
-	public class JSONCombiner: MonoBehaviour
+	public class JSONCombiner
 	{
 		
 		string filePath;
 		int linesOfCode;
 		public string japarserData;
 		
-		public JSONCombiner(string filePath, int linesOfCode) {
+		public JSONCombiner(string filePath) {
 			
 			this.filePath = filePath;
-			this.linesOfCode = linesOfCode;
+
 			
 		}
 		
@@ -27,7 +27,8 @@ namespace AssemblyCSharpvs
 		//Requests data from japarser web api
 		//returns the json data for a particular class
 		public string JSONRequester (){
-			
+
+			try{
 			string url = "http://japarser.appspot.com/src?url=" + filePath;
 			//Make the request
 			WebRequest request = WebRequest.Create (url);
@@ -54,6 +55,9 @@ namespace AssemblyCSharpvs
 			// Clean up the streams and the response.
 			reader.Close ();
 			response.Close ();
+			}catch(Exception e){
+				Debug.Log ("exception: "+e); 
+						}
 			
 			return japarserData;
 			
@@ -77,13 +81,13 @@ namespace AssemblyCSharpvs
 			string mockFilePath = "http://google-guice.googlecode.com/svn/trunk/core/src/com/google/inject/Key.java";
 			
 			//Integrating with Custom Parser Component:
-			CustomParser customParser = new CustomParser (mockFilePath);
-			int linesOfCode = customParser.createLOCJSON ();
+			//CustomParser customParser = new CustomParser (mockFilePath);
+			//int linesOfCode = customParser.get
 
 			//Debug.Log ("testing log");
 
-			JSONCombiner combiner = new JSONCombiner(mockFilePath, linesOfCode);
-			combiner.JSONRequester();
+			//JSONCombiner combiner = new JSONCombiner(mockFilePath, linesOfCode);
+			//combiner.JSONRequester();
 			
 			//Debug.Log(combiner.JSONRequester());
 			//Debug.Log(combiner.getLinesOfCode());

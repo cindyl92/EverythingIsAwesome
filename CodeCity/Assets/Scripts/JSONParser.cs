@@ -6,16 +6,80 @@ using System.Net;
 using System.IO;
 using UnityEngine;
 
-namespace  AssemblyCSharpvs 
+namespace  AssemblyCSharpvs
 {
 
 //This class will take the JSON data from JSONCombiner.cs and parse it to get the class with most coupling and the linesOfCode for that class, which will be passed into the visualizer
-public class JSONParser :MonoBehaviour
+public class JSONParser:ScriptableObject //ScriptableObject is a bit easier to deal with in unit tests than MonoBehavior
 {
+	string stringProbe;
+
+	ArrayList readFilePaths (string filePath) {
+		
+			ArrayList filePathsArray = new ArrayList ();
+			try
+			{
+				using (StreamReader sr = new StreamReader(filePath))
+				{
+					while (sr.Peek() >= 0)
+					{
+						stringProbe = sr.ReadLine(); //reads in the next line from text
+						filePathsArray.Add (stringProbe);
+					}
+				}
+			}
+			catch (Exception e)
+			{
+				Debug.Log ("The process failed: {0}"+ e.ToString());
+			}
+			return filePathsArray;	
+		}
+
+
+		//code inspired from http://msdn.microsoft.com/en-us/library/456dfw4f(v=vs.110).aspx
+		//Requests data from japarser web api
+		//returns the json data for a particular class
+		public string JSONRequester (string filePath){
+
+			string japarserData = "";
+			
+			try{
+				string url = "http://japarser.appspot.com/src?url=" + filePath;
+				//Make the request
+				WebRequest request = WebRequest.Create (url);
+				
+				request.Credentials = CredentialCache.DefaultCredentials;
+				
+				//Get the response
+				WebResponse response = request.GetResponse ();
+				
+				// Display the status.
+				Console.WriteLine (((HttpWebResponse)response).StatusDescription);
+				
+				// Get the stream containing content returned by the server.
+				Stream dataStream = response.GetResponseStream ();
+				
+				// Open the stream using a StreamReader for easy access.
+				StreamReader reader = new StreamReader (dataStream);
+				
+				// Read the content.
+				japarserData = reader.ReadToEnd ();
+
+				// Clean up the streams and the response.
+				reader.Close ();
+				response.Close ();
+			}catch(Exception e){
+				Debug.Log ("exception: "+e); 
+			}
+			
+			return japarserData;
+			
+		}
+	
 
 	//This method will read a list of all the types in the project and the json data for a particular file and output
 	//a list of all the classes that have coupling with it
-	ArrayList parseforCoupling (ArrayList allTypes, string jsonData){
+	ArrayList parseforCoupling (ArrayList allTypes, string jsonData, int linesOfCode, int commentDensity){
 		SimpleJSON.JSONNode N = SimpleJSON.JSONNode.Parse (jsonData);
 
 		ArrayList coupledClasses = new ArrayList ();
@@ -27,6 +91,8 @@ public class JSONParser :MonoBehaviour
 
 		int numberOfFields = N ["fields"].Count;
 		int numberOfMethods = N ["methods"].Count;
+		int numberOfSubclasses = N ["extendsClasses"].Count;
+		int numberOfInterfaces = N ["implementsInterfaces"].Count;
 
 			//Debug.Log ("field count: " + numberOfFields);
 			//Debug.Log ("method count: " + numberOfMethods);
@@ -81,7 +147,6 @@ public class JSONParser :MonoBehaviour
 				if (coupledClasses.Contains(returnType)){
 					int index = coupledClasses.IndexOf(returnType);
 					int value = (int) coupledCounts[index];
-						Debug.Log("inside second if, old value is:"+value);
 					if (index >= 0){
 					coupledCounts[index] = value + 1;
 						}
@@ -96,7 +161,47 @@ public class JSONParser :MonoBehaviour
 			}
 		}
 
-			//Debug.Log ("coupledCounts counts after methods loop: "+coupledCounts.Capacity);
+
+			for (int k = 0; k< numberOfSubclasses; k++)
+			{
+				string fieldType = N["extendsClasses"][k]["name"].Value;
+				//If the type of the field is not equal to the className and it is another class in the project, then we have coupling
+				if (fieldType != className && allTypes.Contains(fieldType)) 
+				{
+					//If the class has a coupling instance already, increase the couple count
+					if (coupledClasses.Contains(fieldType)){
+						int index = coupledClasses.IndexOf(fieldType);
+						int value = (int) coupledCounts[index];
+						if (index >= 0)
+							coupledCounts[index] = value++;
+						//otherwise add it to the array and init its count to 1
+					}else{
+						coupledClasses.Add(fieldType);
+						coupledCounts.Add(1);
+					}
+				}
+			}
+
+			for (int l = 0; l< numberOfInterfaces; l++)
+			{
+				string fieldType = N["implementsInterfaces"][l]["name"].Value;
+				//If the type of the field is not equal to the className and it is another class in the project, then we have coupling
+				if (fieldType != className && allTypes.Contains(fieldType)) 
+				{
+					//If the class has a coupling instance already, increase the couple count
+					if (coupledClasses.Contains(fieldType)){
+						int index = coupledClasses.IndexOf(fieldType);
+						int value = (int) coupledCounts[index];
+						if (index >= 0)
+							coupledCounts[index] = value++;
+						//otherwise add it to the array and init its count to 1
+					}else{
+						coupledClasses.Add(fieldType);
+						coupledCounts.Add(1);
+					}
+				}
+			}
+
 		int maxCount = 0;
 
 		foreach (int i in coupledCounts) {
@@ -105,73 +210,80 @@ public class JSONParser :MonoBehaviour
 						}
 				}
 
-//			Debug.Log ("maxCount: "+maxCount);
-//
-//			for (int i = 0; i<coupledCounts.Capacity; i++) {
-//				Debug.Log ("coupledCounts at index"+ i +"is: "+coupledCounts[i]);
-//				Debug.Log ("coupledClasses at index"+ i +"is: "+coupledClasses[i]);
-//						}
-
 		int indexOfMax = coupledCounts.IndexOf (maxCount);
 
-			//Debug.Log ("indexOfMax"+indexOfMax);
 
-		string maxCoupledClass = (string) coupledClasses[indexOfMax];
+			string maxCoupledClass = "no coupling";
+		if (indexOfMax >= 0){
+		maxCoupledClass = (string) coupledClasses[indexOfMax];
 
-			//Debug.Log ("maxCoupledClass is: " + maxCoupledClass);
+			}
+
+		string typeName = N ["qualifiedTypeName"];
+		string packageName = typeName.Substring (0, typeName.Length - (className.Length +1));
 
 		ArrayList result = new ArrayList();
 
 		result.Add (className);
 		result.Add (maxCoupledClass);
 		result.Add (maxCount);
-		result.Add (parseForLineCount (jsonData));
+		result.Add (linesOfCode);
+		result.Add (commentDensity);
+		result.Add (packageName);
 
-		//Returns an array with 4 fields: [0] = class name, [1] = name of most coupled class, [2] = number of times its coupled with that class, [3] = line count 
 		return result;
-
-
 	}
 
-	//This method will return an approximate line count for a particular java class based on the line number of the last method
-	int parseForLineCount (string jsonData) {
-		SimpleJSON.JSONNode N = SimpleJSON.JSONNode.Parse (jsonData);
-		int numberOfMethods = N ["methods"].Count;
 
-		//This will return the line number of the last method in the code
-		//While this is not the most accurate line count, it gives us a rough idea of the lines of code temporaily before we complete a full LoC counter
+	ArrayList getAllClassNames (ArrayList filePaths) {
 
-		//once we have the proper line parser from Kevin, we can use the following code:
-		//return N ["linesOfCode"][0]["lines"].Value;
+			ArrayList allClassNames = new ArrayList ();
+			for (int i = 0; i< filePaths.Count-1; i++){
+				JSONCombiner jRequest = new JSONCombiner((string)filePaths[i]);
+				string jsonData = jRequest.JSONRequester();
+				SimpleJSON.JSONNode N = SimpleJSON.JSONNode.Parse(jsonData);
+				string className = N ["name"].Value; 
+				allClassNames.Add(className);
+			}
+			return allClassNames;
+	}
 
-		return N ["methods"] [numberOfMethods - 1] ["line"].AsInt;
+	ArrayList getAllResults (string filePaths, string codeFile) {
+			CustomParser customParser = new CustomParser (codeFile);
+	
+			ArrayList filePathsArray = this.readFilePaths (filePaths);
+			ArrayList linesOfCodeArray = customParser.getArrayLOC();
+			ArrayList commentDensityArray = customParser.getArrayCommentDensity ();
+			ArrayList allResults = new ArrayList ();
+			ArrayList allClasses = this.getAllClassNames(filePathsArray);
+
+			for (int i = 0; i<filePathsArray.Count-1; i++) {
+				string jsonData = this.JSONRequester((string)filePathsArray[i]);
+				ArrayList result = this.parseforCoupling (allClasses, jsonData, (int)linesOfCodeArray[i], (int)commentDensityArray[i]);
+				allResults.Add(result);
+			}
+
+			return allResults;
 	}
 
 	void Start() {
-		Console.WriteLine ("testing console");
 
-		string mockFilePath = "http://google-guice.googlecode.com/svn/trunk/core/src/com/google/inject/Key.java";
-			
-			//Integrating with Custom Parser Component:
-			CustomParser customParser = new CustomParser (mockFilePath);
-			int linesOfCode = customParser.createLOCJSON ();
+			ArrayList mockAllResults = this.getAllResults ("mockFilePaths.txt", "mockJavaCode.txt");
 
-			//Debug.Log("linesOfCode from customParser is: "+linesOfCode);
+			for (int i = 0; i< mockAllResults.Count; i++){
+				ArrayList result = (ArrayList) mockAllResults[i];
 
-			//Integrating with Japarser Component (JSONCombiner)
-			JSONCombiner combiner = new JSONCombiner (mockFilePath, linesOfCode);
-			string jsonData = combiner.JSONRequester ();
+				Debug.Log ("RESULTS FOR CLASS: " + result [0]);
+				Debug.Log ("most coupled class is: " + result [1]);
+				Debug.Log ("number of instances: " + result [2]);
+				Debug.Log ("lines of code: " + result [3]);
+				Debug.Log ("comment density: " + result [4]);
+				Debug.Log ("package: " + result [5]);					
 
-			//Debug.Log("jsonData: "+jsonData);
+			}
 
-			ArrayList mockAllTypes = new ArrayList{"Key<Provider<T>>", "Key<T>", "Key<?>", "AnnotationStrategy", "TypeLiteral<T>"};
-			ArrayList result = this.parseforCoupling (mockAllTypes, jsonData);
-
-//			for (int i = 0; i< result.Capacity; i++){
-//			Debug.Log (result[i]);
-//			}
+			Debug.Log ("Woohoo! Everything is Awesome!");
 		}
-
 	}
 }
 

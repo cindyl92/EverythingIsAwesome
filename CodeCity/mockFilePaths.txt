@@ -1,0 +1,9 @@
+https://github.com/RobotiumTech/robotium/blob/master/robotium-solo/src/main/java/com/robotium/solo/ActivityUtils.java
+https://github.com/RobotiumTech/robotium/blob/master/robotium-solo/src/main/java/com/robotium/solo/Asserter.java
+https://github.com/RobotiumTech/robotium/blob/master/robotium-solo/src/main/java/com/robotium/solo/By.java
+https://github.com/RobotiumTech/robotium/blob/master/robotium-solo/src/main/java/com/robotium/solo/Checker.java
+https://github.com/RobotiumTech/robotium/blob/master/robotium-solo/src/main/java/com/robotium/solo/Clicker.java
+https://github.com/RobotiumTech/robotium/blob/master/robotium-solo/src/main/java/com/robotium/solo/Condition.java
+https://github.com/RobotiumTech/robotium/blob/master/robotium-solo/src/main/java/com/robotium/solo/DialogUtils.java
+https://github.com/RobotiumTech/robotium/blob/master/robotium-solo/src/main/java/com/robotium/solo/GLRenderWrapper.java
+
