@@ -2,9 +2,16 @@
 using System.Collections;
 //using Math;
 
+namespace  AssemblyCSharpvs
+{
+
 public class BuildingHeight : MonoBehaviour {
 	public GameObject plane;
 	public GameObject mainCamera;
+
+	//Cindy: this is how you call the JSONParser
+	//JSONParser parser = ScriptableObject.CreateInstance ("JSONParser");
+	//ArrayList allResults = parser.getAllResults ("mockFilePaths.txt", "mockJavaCode.txt");
 
 	// input format
 	// Class name, coupled class name, # instances of couplings, #LOC, comment density, package
@@ -106,5 +113,8 @@ public class BuildingHeight : MonoBehaviour {
 		positions = new float[,] {{0,0}, {3,1}, {5,3}, {8,2}};
 	}
 
-	void Update () {}
+	void Update () {
+
+		}
+	}
 }

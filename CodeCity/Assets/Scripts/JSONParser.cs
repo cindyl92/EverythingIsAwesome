@@ -9,11 +9,13 @@ using UnityEngine;
 namespace  AssemblyCSharpvs
 {
 
-//This class will take the JSON data from JSONCombiner.cs and parse it to get the class with most coupling and the linesOfCode for that class, which will be passed into the visualizer
+
 public class JSONParser:ScriptableObject //ScriptableObject is a bit easier to deal with in unit tests than MonoBehavior
 {
+	
 	string stringProbe;
-
+	
+	//Reads the filePath text file and returns a list of file paths
 	ArrayList readFilePaths (string filePath) {
 		
 			ArrayList filePathsArray = new ArrayList ();
@@ -234,7 +236,7 @@ public class JSONParser:ScriptableObject //ScriptableObject is a bit easier to d
 		return result;
 	}
 
-
+	//Returns a list of all the class names in the repo
 	ArrayList getAllClassNames (ArrayList filePaths) {
 
 			ArrayList allClassNames = new ArrayList ();
@@ -248,7 +250,8 @@ public class JSONParser:ScriptableObject //ScriptableObject is a bit easier to d
 			return allClassNames;
 	}
 
-	ArrayList getAllResults (string filePaths, string codeFile) {
+	//Returns the combined results of all the classes in the repo (coupling, lines of code, comment density)
+	public ArrayList getAllResults (string filePaths, string codeFile) {
 			CustomParser customParser = new CustomParser (codeFile);
 	
 			ArrayList filePathsArray = this.readFilePaths (filePaths);
