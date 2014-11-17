@@ -1,10 +1,17 @@
 ﻿using UnityEngine;
 using System.Collections;
 
+namespace  AssemblyCSharpvs
+{
+
 public class BuildingHeight : MonoBehaviour {
 	public GameObject plane;
 	public GameObject mainCamera;
 	public GameObject directionalLight;
+
+	//Cindy: this is how you call the JSONParser
+	//JSONParser parser = ScriptableObject.CreateInstance ("JSONParser");
+	//ArrayList allResults = parser.getAllResults ("mockFilePaths.txt", "mockJavaCode.txt");
 
 	// input format
 	// Class name, coupled class name, # instances of couplings, #LOC, comment density, package
@@ -153,5 +160,8 @@ public class BuildingHeight : MonoBehaviour {
 		}
 	}
 
-	void Update () {}
+	void Update () {
+
+		}
+	}
 }
