@@ -70,7 +70,7 @@ function writeFiles() {
 	var pathWriter : StreamWriter = new StreamWriter("Temp/javaPaths.txt");
 	var textWriter : StreamWriter = new StreamWriter("Temp/javaText.txt");
 
-	for (var file = 0; file < javaPaths.length; file++) {
+	for (var file = 0; file < javas.length; file++) {
 		pathWriter.WriteLine(javas[file]);
 		var rawWWW = new WWW("https://raw.githubusercontent.com/" + repo + branch + javas[file]);
     yield rawWWW;
