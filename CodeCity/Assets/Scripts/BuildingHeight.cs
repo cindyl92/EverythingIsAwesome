@@ -1,32 +1,35 @@
 ﻿using UnityEngine;
 using System.Collections;
-//using Math;
 
 public class BuildingHeight : MonoBehaviour {
 	public GameObject plane;
 	public GameObject mainCamera;
+	public GameObject directionalLight;
 
 	// input format
 	// Class name, coupled class name, # instances of couplings, #LOC, comment density, package
-	string[,] javaClasses = new string[,] {{"ClassA", "120", "ClassB", "123", "10", "PackageA"},
-		{"ClassC", "342", "ClassD", "324", "50", "PackageA"},
-		{"ClassB", "13", "ClassA", "1005", "2", "PackageA"},
-		{"ClassD", "13", "ClassC", "72", "30", "PackageA"}};
-	// string[,] javaClasses = new string[,] {{ClassA, 120, CouplingClassB, 123}, {ClassC, 342, CouplingClassD, 324}, ... }
-	//  {Class, # Lines of Code, Coupling Class, # of couplings}
+	string[,] javaClasses = new string[,] {{"ClassA", "120", "ClassC", "123", "10", "PackageA"},
+		{"ClassB", "342", "ClassD", "324", "50", "PackageA"},
+		{"ClassC", "13", "ClassA", "1005", "90", "PackageA"},
+		{"ClassD", "13", "ClassB", "72", "30", "PackageA"}};
 	
 	int numBuildings;
+
 	float[] bases;
 	float[] heights;
-	float[,] positions;
 	Color[] colours;
+
+	int[,] buidlingOrders;
+	float[,] positions;
 	
 	void Start () {
 		float planeX = 0;
 		float planeY = 0;
 		float planeZ = 0;
 
-		setBuildingDetails(javaClasses);
+		setBuildingOrders (javaClasses);
+		setBuildingDetails (javaClasses);
+		positions = new float[,] {{0,0}, {3,1}, {5,3}, {8,2}};
 
 		// Mock Objects for placing and scaling the buildings
 		/*numBuildings = 4;
@@ -35,6 +38,10 @@ public class BuildingHeight : MonoBehaviour {
 		positions = new float[,] {{0,0}, {3,1}, {5,3}, {8,2}};
 		colours = new Color[]{Color.green, Color.blue, Color.red, Color.yellow, Color.cyan, Color.magenta};*/
 
+		if (numBuildings == null || positions == null) {
+			Debug.Log("Cindy - No input or invalid input.");
+			return;
+		}
 
 		// Instantiate example from : http://docs.unity3d.com/Manual/InstantiatingPrefabs.html
 		// instantiate building objects and apply building position, scale (height and bases), and colour
@@ -61,14 +68,16 @@ public class BuildingHeight : MonoBehaviour {
 		plane.transform.localScale = new Vector3(planeX/5, 0, planeZ/5);
 		plane.transform.position = new Vector3(planeX/2, 0, planeZ/2);
 
-		Debug.Log("Max X = "+ planeX);
-		Debug.Log("Max Y = "+ planeY);
-		Debug.Log("Max Z = "+ planeZ);
+		//Debug.Log("Max X = "+ planeX);
+		//Debug.Log("Max Y = "+ planeY);
+		//Debug.Log("Max Z = "+ planeZ);
 
-		// place main camera to show all the buildings
+		// place main camera and directional light to show all the buildings
 		mainCamera.transform.position = new Vector3 (planeX / 2, planeY / 2, -planeY);
+		directionalLight.transform.position = new Vector3 (planeX / 2, planeY - 10, -10);
 	}
-	
+
+	// Set buiding bases, heights, colours, and positions
 	void setBuildingDetails (string[,] javaClasses) {
 		numBuildings = javaClasses.GetLength(0);
 		//Debug.Log ("Number of Buildings = " + numBuildings);
@@ -78,32 +87,70 @@ public class BuildingHeight : MonoBehaviour {
 		colours = new Color[numBuildings];
 
 		for (int x = 0; x<numBuildings; x++){
-			bases[x] = 1f;
+			setBases (x);
+			setHeights (x);
+			setColours (x);
+		}
+	}
 
-			// set height
-			float tempHeight = float.Parse(javaClasses[x,3]);
-			if(tempHeight < 0){
-				Debug.Log("LOC is in negative number");
-				return;
-			} else if(tempHeight <= 300) {
-				heights[x] = tempHeight / 10;
-			} else {
-				heights[x] = 30 + tempHeight / 500;
+	void setBases (int x) {
+		bases[x] = 1f;
+	}
+
+	void setHeights (int x) {
+		float tempHeight = float.Parse(javaClasses[x,3]);
+		if(tempHeight < 0){
+			Debug.Log("invalid LOC:" +tempHeight+ ", class: " +javaClasses[x,0]);
+			return;
+		} else if(tempHeight <= 300) {
+			heights[x] = tempHeight / 10;
+		} else {
+			heights[x] = 30 + tempHeight / 500;
+		}
+	}
+
+	void setColours (int x) {
+		int commentDensity = int.Parse(javaClasses[x,4]);
+		
+		Color lightBlue = new Color(0.177F, 0.204F, 0.243F, 0.5F);
+		Color blue = new Color(0.1F, 0.1F, 0.7F, 0.5F);
+		Color darkBlue = new Color(0.1F, 0.1F, 0.1F, 0.5F);
+		
+		if(commentDensity < 0 || commentDensity > 100){
+			Debug.Log("invalid comment density: " +commentDensity+ ", class: " +javaClasses[x,0]);
+		} else if (commentDensity < 30){
+			//colours[x] = lightBlue;
+			colours[x] = Color.white;
+			//Debug.Log("light- comment density: " +commentDensity+ ", class: " +javaClasses[x,0]);
+		} else if (commentDensity < 60){
+			//colours[x] = blue;
+			colours[x] = Color.blue;
+			//Debug.Log("blue- comment density: " +commentDensity+ ", class: " +javaClasses[x,0]);
+		} else {
+			//colours[x] = darkBlue;
+			colours[x] = Color.black;
+			//Debug.Log("dark- comment density: " +commentDensity+ ", class: " +javaClasses[x,0]);
+		}
+	}
+	
+	// set building orders based on coupling relations into 2d array
+	void setBuildingOrders(string[,] javaClasses) {
+		int arrHeight;
+		for (int x = 0; x < numBuildings; x++) {
+			if(x == 0){
+				buidlingOrders[x,0] = x;
 			}
-
-			//float[,] positions;
-
-			int commentDensity = int.Parse(javaClasses[x,4]);
-
-			if(commentDensity < 0){
-				Debug.Log("Density is in negative number");
-			} else if (commentDensity < 50){
-				colours[x] = Color.yellow;
-			} else {
-				colours[x] = Color.red;
+			else{
+				for(int y = 0; y < x; y++){
+					if (javaClasses[y,2] == javaClasses[x,0]){
+						//set the building beside
+					}
+					else {
+						//set the building below
+					}
+				}
 			}
 		}
-		positions = new float[,] {{0,0}, {3,1}, {5,3}, {8,2}};
 	}
 
 	void Update () {}
