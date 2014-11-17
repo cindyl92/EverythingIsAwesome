@@ -1,16 +1,29 @@
 ﻿#pragma strict
 import SimpleJSON;
+import System.IO;
 
 var repo = "RobotiumTech/Robotium";
 var token = "access_token=9c972df855af8fb6245a3182a48787c4d81279b8";
-var url = "https://api.github.com/repos/"+ repo + "contents/?";
+var url = "https://api.github.com/repos/"+ repo + "/contents?";
+var branch = "";
 var dirsToExplore = new Array();
 dirsToExplore.Add(url);
 var exploredDirs = new Array();
 var javas = new Array();
 
 function Start () {
+	yield StartCoroutine(determineBranch());
 	yield StartCoroutine(search(url + token));
+	writeFiles();
+}
+
+function determineBranch() {
+	var www = new WWW("https://api.github.com/repos/" + repo + "/branches");
+	yield www;
+	var response = www.text;
+	var firstBranch = JSON.Parse(response)[0];
+	branch = "/" + firstBranch["name"] + "/";
+	Debug.Log("BRANCH: " + branch);
 }
 
 function search(currentPath) : IEnumerator {
@@ -51,6 +64,24 @@ function search(currentPath) : IEnumerator {
 	    	yield search(dir + "&" + token);
 	    }
 	}
+}
+
+function writeFiles() {
+	var pathWriter : StreamWriter = new StreamWriter("Temp/javaPaths.txt");
+	var textWriter : StreamWriter = new StreamWriter("Temp/javaText.txt");
+
+	for (var file = 0; file < javaPaths.length; file++) {
+		pathWriter.WriteLine(javas[file]);
+		var rawWWW = new WWW("https://raw.githubusercontent.com/" + repo + branch + javas[file]);
+    yield rawWWW;
+    textWriter.WriteLine(rawWWW.text);
+    textWriter.WriteLine("@#$");
+	}
+
+	pathWriter.Flush();
+	textWriter.Flush();
+	pathWriter.Close();
+	textWriter.Close();
 }
 
 function Update () {
