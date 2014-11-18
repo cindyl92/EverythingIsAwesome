@@ -6,4 +6,3 @@ https://github.com/RobotiumTech/robotium/blob/master/robotium-solo/src/main/java
 https://github.com/RobotiumTech/robotium/blob/master/robotium-solo/src/main/java/com/robotium/solo/Condition.java
 https://github.com/RobotiumTech/robotium/blob/master/robotium-solo/src/main/java/com/robotium/solo/DialogUtils.java
 https://github.com/RobotiumTech/robotium/blob/master/robotium-solo/src/main/java/com/robotium/solo/GLRenderWrapper.java
-
