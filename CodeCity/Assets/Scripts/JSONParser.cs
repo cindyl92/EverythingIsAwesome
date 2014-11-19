@@ -8,6 +8,8 @@ using UnityEngine;
 
 namespace  AssemblyCSharpvs
 {
+public class JSONParser//:ScriptableObject //ScriptableObject is a bit easier to deal with in unit tests than MonoBehavior
+{
 	
 	
 	public class JSONParser:ScriptableObject //ScriptableObject is a bit easier to deal with in unit tests than MonoBehavior
