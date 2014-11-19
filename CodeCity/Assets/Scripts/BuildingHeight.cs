@@ -15,10 +15,10 @@ public class BuildingHeight : MonoBehaviour {
 
 	// input format
 	// Class name, coupled class name, # instances of couplings, #LOC, comment density, package
-	string[,] javaClasses = new string[,] {{"ClassA", "120", "ClassC", "123", "10", "PackageA"},
-		{"ClassB", "342", "ClassD", "324", "50", "PackageA"},
-		{"ClassC", "13", "ClassA", "1005", "90", "PackageA"},
-		{"ClassD", "13", "ClassB", "72", "30", "PackageA"}};
+		string[,] javaClasses; //= new string[,] {{"ClassA", "120", "ClassC", "123", "10", "PackageA"},
+	//	{"ClassB", "342", "ClassD", "324", "50", "PackageA"},
+	//	{"ClassC", "13", "ClassA", "1005", "90", "PackageA"},
+	//	{"ClassD", "13", "ClassB", "72", "30", "PackageA"}};
 	
 	int numBuildings;
 
@@ -30,6 +30,10 @@ public class BuildingHeight : MonoBehaviour {
 	float[,] positions;
 	
 	void Start () {
+
+
+		JSONParser parser = (JSONParser) ScriptableObject.CreateInstance ("JSONParser");
+		javaClasses = parser.getAllResults ("mockFilePaths.txt", "mockJavaCode.txt");
 		float planeX = 0;
 		float planeY = 0;
 		float planeZ = 0;
