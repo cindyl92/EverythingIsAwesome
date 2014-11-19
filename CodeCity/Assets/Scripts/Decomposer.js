@@ -1,29 +1,16 @@
-﻿// #pragma strict
+﻿#pragma strict
 import SimpleJSON;
 import System.IO;
 
-var repo = "";
-var url = "";
-// var repo = "RobotiumTech/Robotium";
+var repo = "RobotiumTech/Robotium";
 // var repo = "psaravan/JamsMusicPlayer";
 var token = "access_token=9c972df855af8fb6245a3182a48787c4d81279b8";
+var url = "https://api.github.com/repos/"+ repo + "/contents?";
 var branch = "";
 var javas = new Array();
 
-function verify(repository) {
-  repo = repository;
-  url = "https://api.github.com/repos/"+ repo + "/contents?";
-  if ((repo != "") && (url != "")) {
-    Debug.Log("REPOSITORY: " + repo);
-    yield StartCoroutine(determineBranch());
-    yield decompose();
-  } else {
-    Destroy(this.gameObject);
-    this.enabled = false;
-  }
-}
-
-function decompose () {
+function Start () {
+  yield StartCoroutine(determineBranch());
   yield StartCoroutine(search(url + token));
   writeFiles();
 }
@@ -31,18 +18,14 @@ function decompose () {
 function determineBranch() {
   var www = new WWW("https://api.github.com/repos/" + repo + "/branches");
   yield www;
-  if (!String.IsNullOrEmpty(www.error)) {
-    Debug.Log("ERROR, CANNOT CONNECT TO REPO: " + repo);
-    Destroy(this.gameObject);
-  } else {
   var response = www.text;
   var firstBranch = JSON.Parse(response)[0];
   branch = "/" + firstBranch["name"] + "/";
   Debug.Log("BRANCH: " + branch);
-  }
 }
 
 function search(currentPath) : IEnumerator {
+  Debug.Log("WORKING ON: " + currentPath);
   var www = new WWW(currentPath);
   yield www;
   var response = www.text;
@@ -84,4 +67,8 @@ function writeFiles() {
   pathWriter.Close();
   textWriter.Close();
   Debug.Log("WRITING END");
+}
+
+function Update () {
+
 }

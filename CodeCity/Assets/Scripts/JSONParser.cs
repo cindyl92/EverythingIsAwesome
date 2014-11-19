@@ -8,8 +8,10 @@ using UnityEngine;
 
 namespace  AssemblyCSharpvs
 {
-public class JSONParser//:ScriptableObject //ScriptableObject is a bit easier to deal with in unit tests than MonoBehavior
-{
+	
+	
+	public class JSONParser:ScriptableObject //ScriptableObject is a bit easier to deal with in unit tests than MonoBehavior
+	{
 		
 		string stringProbe;
 		ArrayList allJSONData;
@@ -26,7 +28,6 @@ public class JSONParser//:ScriptableObject //ScriptableObject is a bit easier to
 					{
 						stringProbe = sr.ReadLine(); //reads in the next line from text
 						filePathsArray.Add (stringProbe);
-						//Debug.Log("read "+filePath); 
 					}
 				}
 			}
@@ -49,7 +50,6 @@ public class JSONParser//:ScriptableObject //ScriptableObject is a bit easier to
 			try{
 				
 				string url = "http://japarser.appspot.com/src?url=" + filePath;
-				//string url = "http://japarser.appspot.com/src?url=https://github.com/psaravan/JamsMusicPlayer/blob/master/" + filePath;
 				
 				//this url is temporary for testing the robotium repo until the text file has been fixed with the html file path
 				//string url = "http://japarser.appspot.com/src?url=https://github.com/RobotiumTech/robotium/blob/master/" + filePath;
@@ -69,8 +69,6 @@ public class JSONParser//:ScriptableObject //ScriptableObject is a bit easier to
 				
 				// Read the content.
 				japarserData = reader.ReadToEnd ();
-
-				//Debug.Log("Successfully retreived data for: "+filePath);
 				
 				// Clean up the streams and the response.
 				reader.Close ();
@@ -167,19 +165,19 @@ public class JSONParser//:ScriptableObject //ScriptableObject is a bit easier to
 			//Check for coupling with extends subclasses
 			for (int k = 0; k< numberOfSubclasses; k++)
 			{
-				string subclassType = N["extendsClasses"][k]["name"].Value;
+				string fieldType = N["extendsClasses"][k]["name"].Value;
 				//If the type of the field is not equal to the className and it is another class in the project, then we have coupling
-				if (subclassType != className && allTypes.Contains(subclassType)) 
+				if (fieldType != className && allTypes.Contains(fieldType)) 
 				{
 					//If the class has a coupling instance already, increase the couple count
-					if (coupledClasses.Contains(subclassType)){
-						int index = coupledClasses.IndexOf(subclassType);
+					if (coupledClasses.Contains(fieldType)){
+						int index = coupledClasses.IndexOf(fieldType);
 						int value = (int) coupledCounts[index];
 						if (index >= 0)
 							coupledCounts[index] = value++;
 						//otherwise add it to the array and init its count to 1
 					}else{
-						coupledClasses.Add(subclassType);
+						coupledClasses.Add(fieldType);
 						coupledCounts.Add(1);
 					}
 				}
@@ -188,19 +186,19 @@ public class JSONParser//:ScriptableObject //ScriptableObject is a bit easier to
 			//Check for coupling with implements interfaces
 			for (int l = 0; l< numberOfInterfaces; l++)
 			{
-				string interfaceType = N["implementsInterfaces"][l]["name"].Value;
+				string fieldType = N["implementsInterfaces"][l]["name"].Value;
 				//If the type of the field is not equal to the className and it is another class in the project, then we have coupling
-				if (interfaceType != className && allTypes.Contains(interfaceType)) 
+				if (fieldType != className && allTypes.Contains(fieldType)) 
 				{
 					//If the class has a coupling instance already, increase the couple count
-					if (coupledClasses.Contains(interfaceType)){
-						int index = coupledClasses.IndexOf(interfaceType);
+					if (coupledClasses.Contains(fieldType)){
+						int index = coupledClasses.IndexOf(fieldType);
 						int value = (int) coupledCounts[index];
 						if (index >= 0)
 							coupledCounts[index] = value++;
 						//otherwise add it to the array and init its count to 1
 					}else{
-						coupledClasses.Add(interfaceType);
+						coupledClasses.Add(fieldType);
 						coupledCounts.Add(1);
 					}
 				}
@@ -214,32 +212,21 @@ public class JSONParser//:ScriptableObject //ScriptableObject is a bit easier to
 					maxCount = i;
 				}
 			}
-
+			
+			int indexOfMax = coupledCounts.IndexOf (maxCount);
+			
+			
 			string maxCoupledClass = "no coupling";
-			if (maxCount > 0) {
-				int indexOfMax = coupledCounts.IndexOf (maxCount);
-	
-				if (indexOfMax >= 0 && indexOfMax < coupledClasses.Count) {
-					maxCoupledClass = (string)coupledClasses [indexOfMax];
-				}
-			} 
+			if (indexOfMax >= 0){
+				maxCoupledClass = (string) coupledClasses[indexOfMax];
+				
+			}
 			
 			string typeName = N ["qualifiedTypeName"];
-			//Debug.Log ("typeName is: " + typeName);
-
-			string packageName = "unspecified";
-
-			if (typeName != null) {
-					packageName = typeName.Substring (0, typeName.Length - (className.Length + 1));
-				}
-
+			string packageName = typeName.Substring (0, typeName.Length - (className.Length +1));
+			
 			ArrayList result = new ArrayList();
-
-			if (maxCoupledClass.Length <= 1) {
-				maxCoupledClass = "no coupling";
-				maxCount = 0;
-			}
-
+			
 			//Fill the result array
 			result.Add (className);
 			result.Add (maxCoupledClass);
@@ -268,7 +255,7 @@ public class JSONParser//:ScriptableObject //ScriptableObject is a bit easier to
 		}
 		
 		//Returns the combined results of all the classes in the repo (coupling, lines of code, comment density)
-		public string[,] getAllResults (string filePaths, string codeFile) {
+		public ArrayList getAllResults (string filePaths, string codeFile) {
 			
 			//Read the text file and get all the file paths
 			ArrayList filePathsArray = this.readFilePaths (filePaths);
@@ -280,28 +267,17 @@ public class JSONParser//:ScriptableObject //ScriptableObject is a bit easier to
 			ArrayList linesOfCodeArray = customParser.getArrayLOC();
 			//Get all the Comment Density info
 			ArrayList commentDensityArray = customParser.getArrayCommentDensity ();
-
-			Debug.Log ("loc array size is " + commentDensityArray.Count);
 			
-
+			ArrayList allResults = new ArrayList ();
+			
 			//Get all the class names
 			ArrayList allClasses = this.getAllClassNames(filePathsArray);
-
-			//ArrayList allResults = new ArrayList ();
-			string[,] allResults = new string[allClasses.Count,6];
+			
 			
 			for (int i = 0; i<filePathsArray.Count; i++) {
 				string jsonData = (string) allJSONData[i];
 				ArrayList result = this.parseforCoupling (allClasses, jsonData, (int)linesOfCodeArray[i], (int)commentDensityArray[i]);
-
-				//Add the results to a 2D String Array for the Visualizer to use
-				allResults[i, 0] = (string)result[0];
-				allResults[i, 1] = (string)result[1];
-				allResults[i, 2] = (string)result[2].ToString();
-				allResults[i, 3] = (string)result[3].ToString();
-				allResults[i, 4] = (string)result[4].ToString();
-				allResults[i, 5] = (string)result[5];
-
+				allResults.Add(result);
 			}
 			
 			return allResults;
@@ -310,18 +286,17 @@ public class JSONParser//:ScriptableObject //ScriptableObject is a bit easier to
 		void Start() {
 			
 			//ArrayList mockAllResults = this.getAllResults ("roboFilePathsTimes6.txt", "roboCodeTimes6.txt");
-			string[,] mockAllResults = this.getAllResults ("mockFilePaths.txt", "mockJavaCode.txt");
-			//ArrayList mockAllResults = this.getAllResults ("javaPaths.txt", "javaText.txt");
-			//ArrayList mockAllResults = this.getAllResults ("testPaths.txt", "testCode.txt");
+			ArrayList mockAllResults = this.getAllResults ("mockFilePaths.txt", "mockJavaCode.txt");
 			
-			for (int i = 0; i< mockAllResults.GetLength(0); i++){
+			for (int i = 0; i< mockAllResults.Count; i++){
+				ArrayList result = (ArrayList) mockAllResults[i];
 				
-				Debug.Log ("RESULTS FOR CLASS: " + mockAllResults[i,0]);
-				Debug.Log ("most coupled class is: " + mockAllResults[i,1]);
-				Debug.Log ("number of instances: " + mockAllResults[i,2]);
-				Debug.Log ("lines of code: " + mockAllResults[i,3]);
-				Debug.Log ("comment density: " + mockAllResults[i,4]);
-				Debug.Log ("package: " + mockAllResults[i,5]);					
+				Debug.Log ("RESULTS FOR CLASS: " + result [0]);
+				Debug.Log ("most coupled class is: " + result [1]);
+				Debug.Log ("number of instances: " + result [2]);
+				Debug.Log ("lines of code: " + result [3]);
+				Debug.Log ("comment density: " + result [4]);
+				Debug.Log ("package: " + result [5]);					
 				
 			}
 			
