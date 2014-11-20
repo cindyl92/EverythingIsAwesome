@@ -82,13 +82,4 @@ function writeFiles() {
   pathWriter.Close();
   textWriter.Close();
   Debug.Log("WRITING END");
-
-  wrapUp();
-}
-
-function wrapUp() {
-  var starter : Component;
-  var camera = GameObject.Find("Main Camera");
-  starter = camera.GetComponent("Starter");
-  starter.SendMessage("Finished");
 }
