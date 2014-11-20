@@ -9,15 +9,21 @@ namespace  AssemblyCSharpvs
 		public GameObject directionalLight;
 
 		string[,] javaClasses;
-		// Class name, coupled class name, # couplings, #LOC, comment density, package name
-		/*string[,] javaClasses = new string[,] {{"ClassA", "ClassC", "123", "120", "10", "PackageA"},
-			{"ClassB", "ClassD", "324", "342", "50", "PackageA"},
-			{"ClassC", "ClassA", "105", "13", "90", "PackageA"},
-			{"ClassD", "ClassB", "72", "2700", "30", "PackageA"},
-			{"ClassE", "ClassF", "100", "5", "55", "PackageA"},
-			{"ClassF", "ClassE", "33", "150", "50", "PackageA"},
-			{"ClassG", "ClassA", "112", "440", "5", "PackageA"}};	
-		// */
+		private ArrayList arrayBuildingLabels = new ArrayList();
+
+		//Cindy: this is how you call the JSONParser
+		//JSONParser parser = ScriptableObject.CreateInstance ("JSONParser");
+		//ArrayList allResults = parser.getAllResults ("mockFilePaths.txt", "mockJavaCode.txt");
+
+		// input format
+		// Class name, #LOC, coupled class name, # instances of couplings, comment density, package
+		/*string[,] javaClasses = new string[,] {{"ClassA", "120", "ClassC", "123", "10", "PackageA"},
+			{"ClassB", "342", "ClassD", "324", "50", "PackageA"},
+			{"ClassC", "13", "ClassA", "105", "90", "PackageA"},
+			{"ClassD", "2700", "ClassB", "72", "30", "PackageA"},
+			{"ClassE", "5", "ClassF", "100", "55", "PackageA"},
+			{"ClassF", "150", "ClassE", "33", "50", "PackageA"},
+			{"ClassG", "440", "ClassA", "112", "5", "PackageA"}};*/
 
 		int numBuildings;
 
@@ -48,6 +54,26 @@ namespace  AssemblyCSharpvs
 			// instantiate building objects and apply building position, scale (height and bases), and colour
 			for (int x = 0; x < numBuildings; x++) {
 				GameObject building = GameObject.CreatePrimitive(PrimitiveType.Cube);
+				Rigidbody buildingRigidBody = building.AddComponent<Rigidbody>();
+				buildingRigidBody.isKinematic = true;
+				
+				GameObject clone = new GameObject("className");
+
+				TextMesh buildingLabel = clone.AddComponent<TextMesh>();
+				buildingLabel.transform.position = new Vector3(positions[x,0], 2*(heights[x]/2 + 0.5f), positions[x,1]);
+				//buildingLabel.font = new Font("Arial");
+				Font ArialFont = (Font)Resources.GetBuiltinResource (typeof(Font), "Arial.ttf");
+				buildingLabel.font = ArialFont;
+				buildingLabel.renderer.material = ArialFont.material;
+				buildingLabel.text = javaClasses[x,0];
+				
+				buildingLabel.fontSize = 10;
+				buildingLabel.color = Color.white;
+				
+				arrayBuildingLabels.Add (buildingLabel);
+			
+				//use: http://forum.unity3d.com/threads/make-textmesh-face-camera.251840/ after scripting the camera
+				//someTextMesh.transform.rotation = Camera.main.transform.rotation
 
 				building.transform.position = new Vector3(positions[x,0], heights[x]/2 + 0.5f, positions[x,1]);
 				building.transform.localScale += new Vector3 (bases[x], heights[x], bases[x]);
@@ -69,8 +95,9 @@ namespace  AssemblyCSharpvs
 			if (planeX == 0){ planeX = 15; }
 
 			// resize and replace plane to cover all the buildings
-			plane.transform.localScale = new Vector3(planeX/5, 0, planeZ/5);
-			plane.transform.position = new Vector3(planeX/2, 0, planeZ/2);
+			// JONATHAN EDIT: I commented this out (since I don't think we need a plane. correct me if i'm wrong)
+			// plane.transform.localScale = new Vector3(planeX/5, 0, planeZ/5);
+			// plane.transform.position = new Vector3(planeX/2, 0, planeZ/2);
 
 			//Debug.Log("Max X = "+ planeX);
 			//Debug.Log("Max Y = "+ planeY);
@@ -177,6 +204,12 @@ namespace  AssemblyCSharpvs
 			}
 		}
 
-		void Update () {}
+		void Update () {
+			foreach (TextMesh b in arrayBuildingLabels) {
+				//someTextMesh.transform.rotation = Camera.main.transform.rotation
+				// b.transform.rotation = Camera.main.transform.rotation;
+				
+			}
+		}
 	}
 }

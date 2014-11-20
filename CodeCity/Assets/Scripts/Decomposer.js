@@ -4,9 +4,7 @@ import System.IO;
 
 var repo = "";
 var url = "";
-// var repo = "RobotiumTech/Robotium";
-// var repo = "psaravan/JamsMusicPlayer";
-var token = "access_token=9c972df855af8fb6245a3182a48787c4d81279b8";
+var token = "access_token=9c972df855af8fb6245a3182a48787c4d81279b8"; // This is Jonathan's API access token.
 var branch = "";
 var javas = new Array();
 
@@ -84,4 +82,13 @@ function writeFiles() {
   pathWriter.Close();
   textWriter.Close();
   Debug.Log("WRITING END");
+
+  wrapUp();
+}
+
+function wrapUp() {
+  var starter : Component;
+  var camera = GameObject.Find("Main Camera");
+  starter = camera.GetComponent("Starter");
+  starter.SendMessage("Finished");
 }
