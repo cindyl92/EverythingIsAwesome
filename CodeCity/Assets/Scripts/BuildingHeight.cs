@@ -9,6 +9,8 @@ namespace  AssemblyCSharpvs
 		public GameObject mainCamera;
 		public GameObject directionalLight;
 
+		private ArrayList arrayBuildingLabels = new ArrayList();
+
 		//Cindy: this is how you call the JSONParser
 		//JSONParser parser = ScriptableObject.CreateInstance ("JSONParser");
 		//ArrayList allResults = parser.getAllResults ("mockFilePaths.txt", "mockJavaCode.txt");
@@ -45,6 +47,26 @@ namespace  AssemblyCSharpvs
 			// instantiate building objects and apply building position, scale (height and bases), and colour
 			for (int x = 0; x < numBuildings; x++) {
 				GameObject building = GameObject.CreatePrimitive(PrimitiveType.Cube);
+				Rigidbody buildingRigidBody = building.AddComponent<Rigidbody>();
+				buildingRigidBody.isKinematic = true;
+				
+				GameObject clone = new GameObject("className");
+
+				TextMesh buildingLabel = clone.AddComponent<TextMesh>();
+				buildingLabel.transform.position = new Vector3(positions[x,0], 2*(heights[x]/2 + 0.5f), positions[x,1]);
+				//buildingLabel.font = new Font("Arial");
+				Font ArialFont = (Font)Resources.GetBuiltinResource (typeof(Font), "Arial.ttf");
+				buildingLabel.font = ArialFont;
+				buildingLabel.renderer.material = ArialFont.material;
+				buildingLabel.text = javaClasses[x,0];
+				
+				buildingLabel.fontSize = 10;
+				buildingLabel.color = Color.white;
+				
+				arrayBuildingLabels.Add (buildingLabel);
+			
+				//use: http://forum.unity3d.com/threads/make-textmesh-face-camera.251840/ after scripting the camera
+				//someTextMesh.transform.rotation = Camera.main.transform.rotation
 
 				building.transform.position = new Vector3(positions[x,0], heights[x]/2 + 0.5f, positions[x,1]);
 				building.transform.localScale += new Vector3 (bases[x], heights[x], bases[x]);
@@ -170,6 +192,12 @@ namespace  AssemblyCSharpvs
 			}
 		}
 
-		void Update () {}
+		void Update () {
+			foreach (TextMesh b in arrayBuildingLabels) {
+				//someTextMesh.transform.rotation = Camera.main.transform.rotation
+				b.transform.rotation = Camera.main.transform.rotation;
+				
+			}
+		}
 	}
 }
