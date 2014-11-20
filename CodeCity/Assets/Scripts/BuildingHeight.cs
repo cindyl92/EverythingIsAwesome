@@ -3,36 +3,38 @@ using System.Collections;
 
 namespace  AssemblyCSharpvs
 {
-
 	public class BuildingHeight : MonoBehaviour {
 		public GameObject plane;
 		public GameObject mainCamera;
 		public GameObject directionalLight;
 
-		//Cindy: this is how you call the JSONParser
-		//JSONParser parser = ScriptableObject.CreateInstance ("JSONParser");
-		//ArrayList allResults = parser.getAllResults ("mockFilePaths.txt", "mockJavaCode.txt");
+		string[,] javaClasses;
+		// Class name, coupled class name, # couplings, #LOC, comment density, package name
+		/*string[,] javaClasses = new string[,] {{"ClassA", "ClassC", "123", "120", "10", "PackageA"},
+			{"ClassB", "ClassD", "324", "342", "50", "PackageA"},
+			{"ClassC", "ClassA", "105", "13", "90", "PackageA"},
+			{"ClassD", "ClassB", "72", "2700", "30", "PackageA"},
+			{"ClassE", "ClassF", "100", "5", "55", "PackageA"},
+			{"ClassF", "ClassE", "33", "150", "50", "PackageA"},
+			{"ClassG", "ClassA", "112", "440", "5", "PackageA"}};	
+		// */
 
-		// input format
-		// Class name, #LOC, coupled class name, # instances of couplings, comment density, package
-		string[,] javaClasses = new string[,] {{"ClassA", "120", "ClassC", "123", "10", "PackageA"},
-			{"ClassB", "342", "ClassD", "324", "50", "PackageA"},
-			{"ClassC", "13", "ClassA", "105", "90", "PackageA"},
-			{"ClassD", "2700", "ClassB", "72", "30", "PackageA"},
-			{"ClassE", "5", "ClassF", "100", "55", "PackageA"},
-			{"ClassF", "150", "ClassE", "33", "50", "PackageA"},
-			{"ClassG", "440", "ClassA", "112", "5", "PackageA"}};
-	
 		int numBuildings;
 
 		float[] bases;
 		float[] heights;
 		Color[] colours;
 
-		int[,] buidlingOrders;
 		float[,] positions;
+		int[,] couplings;
 	
 		void Start () {
+			JSONParser parser = new JSONParser();
+			javaClasses = parser.getAllResults("roboFilePaths.txt", "roboCode.txt");
+			// mock file: "mockFilePaths.txt", "mockJavaCode.txt"
+			// Robotium: "roboFilePaths.txt", "roboCode.txt"
+			// jams music: "javaPaths.txt", "javaCode.txt"
+
 			float planeX = 0;
 			float planeY = 0;
 			float planeZ = 0;
@@ -40,6 +42,7 @@ namespace  AssemblyCSharpvs
 			numBuildings = javaClasses.GetLength(0);
 			setPositions (javaClasses);
 			setBuildingDetails (javaClasses);
+			findCouplings (javaClasses);
 
 			// Instantiate example from : http://docs.unity3d.com/Manual/InstantiatingPrefabs.html
 			// instantiate building objects and apply building position, scale (height and bases), and colour
@@ -57,10 +60,13 @@ namespace  AssemblyCSharpvs
 				if (planeY < heights[x]){
 					planeY = heights[x];
 				}
+
 				if (planeZ < positions[x,1]){
 					planeZ = positions[x,1];
 				}
 			}
+
+			if (planeX == 0){ planeX = 15; }
 
 			// resize and replace plane to cover all the buildings
 			plane.transform.localScale = new Vector3(planeX/5, 0, planeZ/5);
@@ -108,64 +114,65 @@ namespace  AssemblyCSharpvs
 
 		void setColours (int x) {
 			int commentDensity = int.Parse(javaClasses[x,4]);
-		/*
-		Color lightBlue = new Color(0.177F, 0.204F, 0.243F, 0.5F);
-		Color blue = new Color(0.1F, 0.1F, 0.7F, 0.5F);
-		Color darkBlue = new Color(0.1F, 0.1F, 0.1F, 0.5F);
-		*/
+
 			if(commentDensity < 0 || commentDensity > 100){
 				Debug.Log("invalid comment density: " +commentDensity+ ", class: " +javaClasses[x,0]);
+
 			} else if (commentDensity < 30){
-			//colours[x] = lightBlue;
 				colours[x] = Color.white;
+
 			} else if (commentDensity < 60){
-			//colours[x] = blue;
 				colours[x] = Color.blue;
+
 			} else {
-			//colours[x] = darkBlue;
 				colours[x] = Color.black;
+
 			}
 		}	
 	
-		// set building positions based on coupling relations
+		// set building positions based on coupling relations and save them into 2d array - positions[,]
 		void setPositions(string[,] javaClasses){
-			int[] numColumns = new int[numBuildings];
-			int lastColumn = 0;
 			positions = new float[numBuildings,2];
 
-			for (int x = 0; x < numBuildings; x++) {
-				if (x == 0) {
-					positions[x,0] = 0;
-					positions[x,1] = 0;
-					numColumns[x] = 0;
-				}
-				else {
-					bool isCoupled = false;
-					float rowNumber;
-					int coupledClass = 0;
+			int numFirstRow = (int) Mathf.Ceil (numBuildings / 4f);
+			//Debug.Log ("numBuildings: " + numBuildings);
+			//Debug.Log ("numFirstRow: " + numFirstRow);
 
+			for (int x = 0; x < numFirstRow; x++) {
+				positions[x,0] = x * 3;
+				positions[x,1] = 0;
+
+				int secondAxisPosition = x + numFirstRow;
+				positions[secondAxisPosition,0] = 0;
+				positions[secondAxisPosition,1] = x * 3 + 3;
+
+				int thirdAxisPosition = x + 2 * numFirstRow;
+				positions[thirdAxisPosition,0] = x * 3 + 3;
+				positions[thirdAxisPosition,1] = numFirstRow * 3;
+
+				int fourthAxisPosition = x + 3 * numFirstRow;
+				if (fourthAxisPosition < numBuildings) {
+					positions[fourthAxisPosition,0] = numFirstRow * 3;
+					positions[fourthAxisPosition,1] = (numFirstRow - x -1) * 3;
+				}
+
+			}
+		}
+
+		// find couplings and save them into 2d array - couplings[,]
+		void findCouplings(string[,] javaClasses){
+			Debug.Log ("Find couplings");
+			couplings = new int[numBuildings,2];
+			for (int x = 0; x < numBuildings; x++) {
+				if(javaClasses[x,2] != "no coupling"){
 					for (int y = 0; y < x; y++) {
-						if (javaClasses[y,0] == javaClasses[x,2]) {
-							isCoupled = true;
-							coupledClass = y;
-							break;
+						if (javaClasses[y,0] == javaClasses[x,1]) {
+							couplings[x,0] = x;
+							couplings[x,1] = y;
+							Debug.Log("Coupling - "+ javaClasses[x,0]+", "+javaClasses[x,1]);
+							break;	
 						}
 					}
-
-					if (isCoupled){
-						Debug.Log(javaClasses[x,0]+" coupling "+javaClasses[coupledClass,0]);
-						rowNumber = positions[coupledClass,0] / 3;
-						numColumns[(int)rowNumber]++;
-						positions[x,0] = positions[coupledClass,0];
-						positions[x,1] = positions[coupledClass,1] + 3f * (float) numColumns[(int)rowNumber];
-						isCoupled = false;
-					} else {
-						lastColumn ++;
-						numColumns[lastColumn] = 0;
-						positions[x,0] = (float) lastColumn * 3;
-						positions[x,1] = 0;
-					}
-					
 				}
 			}
 		}

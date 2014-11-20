@@ -49,8 +49,9 @@
      <Compile Include="Assets\Scripts\BuildingHeight.cs" />
      <Compile Include="Assets\Scripts\CustomParser.cs" />
      <Compile Include="Assets\Scripts\JSONParser.cs" />
+     <Compile Include="Assets\Starter.cs" />
  <Reference Include="JsonFx.Json">
- <HintPath>/Users/bruce_li_94/Documents/EverythingIsAwesome6/CodeCity/Assets/Plugins/JsonFx.Json.dll</HintPath>
+ <HintPath>/Users/Cindy/Desktop/EverythingIsAwesome/CodeCity/Assets/Plugins/JsonFx.Json.dll</HintPath>
  </Reference>
   </ItemGroup>
   <ItemGroup>
