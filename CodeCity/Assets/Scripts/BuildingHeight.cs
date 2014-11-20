@@ -85,8 +85,9 @@ namespace  AssemblyCSharpvs
 			}
 
 			// resize and replace plane to cover all the buildings
-			plane.transform.localScale = new Vector3(planeX/5, 0, planeZ/5);
-			plane.transform.position = new Vector3(planeX/2, 0, planeZ/2);
+			// JONATHAN EDIT: I commented this out (since I don't think we need a plane. correct me if i'm wrong)
+			// plane.transform.localScale = new Vector3(planeX/5, 0, planeZ/5);
+			// plane.transform.position = new Vector3(planeX/2, 0, planeZ/2);
 
 			//Debug.Log("Max X = "+ planeX);
 			//Debug.Log("Max Y = "+ planeY);
@@ -195,7 +196,7 @@ namespace  AssemblyCSharpvs
 		void Update () {
 			foreach (TextMesh b in arrayBuildingLabels) {
 				//someTextMesh.transform.rotation = Camera.main.transform.rotation
-				b.transform.rotation = Camera.main.transform.rotation;
+				// b.transform.rotation = Camera.main.transform.rotation;
 				
 			}
 		}
