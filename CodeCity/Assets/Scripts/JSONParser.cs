@@ -8,8 +8,8 @@ using UnityEngine;
 
 namespace  AssemblyCSharpvs
 {
-public class JSONParser//:ScriptableObject //ScriptableObject is a bit easier to deal with in unit tests than MonoBehavior
-{
+	public class JSONParser//:ScriptableObject //ScriptableObject is a bit easier to deal with in unit tests than MonoBehavior
+	{
 		
 		string stringProbe;
 		ArrayList allJSONData;
@@ -49,10 +49,10 @@ public class JSONParser//:ScriptableObject //ScriptableObject is a bit easier to
 			try{
 				
 				//string url = "http://japarser.appspot.com/src?url=" + filePath;
-				string url = "http://japarser.appspot.com/src?url=https://github.com/psaravan/JamsMusicPlayer/blob/master/" + filePath;
+				//string url = "http://japarser.appspot.com/src?url=https://github.com/psaravan/JamsMusicPlayer/blob/master/" + filePath;
 				
 				//this url is temporary for testing the robotium repo until the text file has been fixed with the html file path
-				//string url = "http://japarser.appspot.com/src?url=https://github.com/RobotiumTech/robotium/blob/master/" + filePath;
+				string url = "http://japarser.appspot.com/src?url=https://github.com/RobotiumTech/robotium/blob/master/" + filePath;
 				//Make the request
 				WebRequest request = WebRequest.Create (url);
 				
@@ -69,7 +69,7 @@ public class JSONParser//:ScriptableObject //ScriptableObject is a bit easier to
 				
 				// Read the content.
 				japarserData = reader.ReadToEnd ();
-
+				
 				//Debug.Log("Successfully retreived data for: "+filePath);
 				
 				// Clean up the streams and the response.
@@ -99,8 +99,7 @@ public class JSONParser//:ScriptableObject //ScriptableObject is a bit easier to
 			int numberOfSubclasses = N ["extendsClasses"].Count;
 			int numberOfInterfaces = N ["implementsInterfaces"].Count;
 			
-			Debug.Log ("STARTING COUPLE CHECK FOR: " + className);
-
+			
 			//Check for coupling with fields
 			for (int i = 0; i< numberOfFields; i++)
 			{
@@ -117,35 +116,17 @@ public class JSONParser//:ScriptableObject //ScriptableObject is a bit easier to
 						//otherwise add it to the array and init its count to 1
 					}else{
 						coupledClasses.Add(fieldType);
-						Debug.Log ("FIELDTYPE COUPLING");
 						coupledCounts.Add(1);
 					}
 				}
 			}
 			
 			
-			//Check for coupling with method paramTypes and returnTypes
+			//Check for coupling with method returnTypes
 			for (int j = 0; j< numberOfMethods; j++)
 			{
-				string paramType = N["methods"][j]["paramName"].Value;
 				string returnType = N["methods"][j]["returnName"].Value;
 				//If the type of the field is not equal to the className and it is another class in the project, then we have coupling
-				if (paramType != className && allTypes.Contains(paramType)) 
-				{
-					//If the class has a coupling instance already, increase the couple count
-					if (coupledClasses.Contains(paramType)){
-						int index = coupledClasses.IndexOf(paramType);
-						int value = (int) coupledCounts[index];
-						if (index >= 0)
-							coupledCounts[index] = value++;
-						//otherwise add it to the array and init its count to 1
-					}else{
-						coupledClasses.Add(paramType);
-						Debug.Log ("PARAMTYPE COUPLING");
-						coupledCounts.Add(1);
-					}
-				}
-				
 				
 				if (returnType != className && allTypes.Contains(returnType)) 
 				{
@@ -220,33 +201,27 @@ public class JSONParser//:ScriptableObject //ScriptableObject is a bit easier to
 					maxCount = i;
 				}
 			}
-
+			
 			string maxCoupledClass = "no coupling";
 			if (maxCount > 0) {
 				int indexOfMax = coupledCounts.IndexOf (maxCount);
-	
+				
 				if (indexOfMax >= 0 && indexOfMax < coupledClasses.Count) {
 					maxCoupledClass = (string)coupledClasses [indexOfMax];
 				}
-			} 
+			}  
 			
 			string typeName = N ["qualifiedTypeName"];
 			//Debug.Log ("typeName is: " + typeName);
-
+			
 			string packageName = "unspecified";
-
+			
 			if (typeName != null) {
-					packageName = typeName.Substring (0, typeName.Length - (className.Length + 1));
-				}
-
-			ArrayList result = new ArrayList();
-
-			if (maxCoupledClass.Length <= 1) {
-				maxCoupledClass = "no coupling";
-				maxCount = 0;
-				Debug.Log("LOST COUPLING");
+				packageName = typeName.Substring (0, typeName.Length - (className.Length + 1));
 			}
-
+			
+			ArrayList result = new ArrayList();
+			
 			//Fill the result array
 			result.Add (className);
 			result.Add (maxCoupledClass);
@@ -287,20 +262,20 @@ public class JSONParser//:ScriptableObject //ScriptableObject is a bit easier to
 			ArrayList linesOfCodeArray = customParser.getArrayLOC();
 			//Get all the Comment Density info
 			ArrayList commentDensityArray = customParser.getArrayCommentDensity ();
-
+			
 			Debug.Log ("loc array size is " + commentDensityArray.Count);
 			
-
+			
 			//Get all the class names
 			ArrayList allClasses = this.getAllClassNames(filePathsArray);
-
+			
 			//ArrayList allResults = new ArrayList ();
 			string[,] allResults = new string[allClasses.Count,6];
 			
 			for (int i = 0; i<filePathsArray.Count; i++) {
 				string jsonData = (string) allJSONData[i];
 				ArrayList result = this.parseforCoupling (allClasses, jsonData, (int)linesOfCodeArray[i], (int)commentDensityArray[i]);
-
+				
 				//Add the results to a 2D String Array for the Visualizer to use
 				allResults[i, 0] = (string)result[0];
 				allResults[i, 1] = (string)result[1];
@@ -308,7 +283,7 @@ public class JSONParser//:ScriptableObject //ScriptableObject is a bit easier to
 				allResults[i, 3] = (string)result[3].ToString();
 				allResults[i, 4] = (string)result[4].ToString();
 				allResults[i, 5] = (string)result[5];
-
+				
 			}
 			
 			return allResults;
@@ -336,5 +311,6 @@ public class JSONParser//:ScriptableObject //ScriptableObject is a bit easier to
 		}
 	}
 }
+
 
 

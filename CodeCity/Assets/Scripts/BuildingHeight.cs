@@ -18,12 +18,12 @@ namespace  AssemblyCSharpvs
 		// input format
 		// Class name, #LOC, coupled class name, # instances of couplings, comment density, package
 		/*string[,] javaClasses = new string[,] {{"ClassA", "120", "ClassC", "123", "10", "PackageA"},
-			{"ClassB", "342", "ClassD", "324", "50", "PackageA"},
-			{"ClassC", "13", "ClassA", "105", "90", "PackageA"},
-			{"ClassD", "2700", "ClassB", "72", "30", "PackageA"},
-			{"ClassE", "5", "ClassF", "100", "55", "PackageA"},
-			{"ClassF", "150", "ClassE", "33", "50", "PackageA"},
-			{"ClassG", "440", "ClassA", "112", "5", "PackageA"}};*/
+			{"ClassB", "342", "ClassD", "324", "50", "PackageA"} ,
+			{"ClassC", "13", "ClassA", "105", "90", "PackageA"} ,
+			{"ClassD", "2700", "ClassB", "72", "30", "PackageA"} ,
+			{"ClassE", "5", "ClassF", "100", "55", "PackageA"} ,
+			{"ClassF", "150", "ClassE", "33", "50", "PackageA"} ,
+			{"ClassG", "440", "ClassA", "112", "5", "PackageA"}} ;*/
 		
 		int numBuildings;
 		
@@ -33,16 +33,16 @@ namespace  AssemblyCSharpvs
 		
 		float[,] positions;
 		int[,] couplings;
-
+		
 		ArrayList allBuildings = new ArrayList();
 		
 		void Start () {
 			JSONParser parser = new JSONParser();
-			javaClasses = parser.getAllResults("javaPaths.txt", "javaText.txt");
+			javaClasses = parser.getAllResults("roboFilePaths.txt", "roboCode.txt");
 			// mock file: "mockFilePaths.txt", "mockJavaCode.txt"
 			// Robotium: "roboFilePaths.txt", "roboCode.txt"
 			// jams music: "javaPaths.txt", "javaText.txt"
-
+			
 			float planeX = 0;
 			float planeY = 0;
 			float planeZ = 0;
@@ -73,7 +73,7 @@ namespace  AssemblyCSharpvs
 				buildingLabel.color = Color.white;
 				
 				arrayBuildingLabels.Add (buildingLabel);
-
+				
 				allBuildings.Add (building);
 				//use: http://forum.unity3d.com/threads/make-textmesh-face-camera.251840/ after scripting the camera
 				//someTextMesh.transform.rotation = Camera.main.transform.rotation
@@ -94,7 +94,7 @@ namespace  AssemblyCSharpvs
 					planeZ = positions[x,1];
 				}
 			}
-
+			
 			drawLines ();
 			
 			if (planeX == 0){ planeX = 15; }
@@ -107,8 +107,8 @@ namespace  AssemblyCSharpvs
 			//Debug.Log("Max X = "+ planeX);
 			//Debug.Log("Max Y = "+ planeY);
 			//Debug.Log("Max Z = "+ planeZ);
-
-
+			
+			
 			
 			// place main camera and directional light to show all the buildings
 			mainCamera.transform.position = new Vector3 (planeX / 2, planeY / 2, -planeY);
@@ -139,9 +139,9 @@ namespace  AssemblyCSharpvs
 			if(tempHeight < 0){
 				Debug.Log("invalid LOC:" +tempHeight+ ", class: " +javaClasses[x,0]);
 				return;
-			} else if(tempHeight <= 300) {
+			}  else if(tempHeight <= 300) {
 				heights[x] = tempHeight / 10;
-			} else {
+			}  else {
 				heights[x] = 30 + tempHeight / 500;
 			}
 		}
@@ -150,19 +150,19 @@ namespace  AssemblyCSharpvs
 			int commentDensity = int.Parse(javaClasses[x,4]);
 			float colorPercent = (float)(commentDensity * 0.01);
 			Color32 color = new Color (0.2F, 0.3F, 0.4F, colorPercent);
-
+			
 			//colours [x] = color;
 			if(commentDensity < 0 || commentDensity > 100){
 				Debug.Log("invalid comment density: " +commentDensity+ ", class: " +javaClasses[x,0]);
 				
-			} else if (commentDensity < 30){
+			}  else if (commentDensity < 30){
 				colours[x] = Color.white;
-
 				
-			} else if (commentDensity < 60){
+				
+			}  else if (commentDensity < 60){
 				colours[x] = Color.blue;
 				
-			} else {
+			}  else {
 				colours[x] = Color.black;
 				
 			}
@@ -216,41 +216,95 @@ namespace  AssemblyCSharpvs
 				}
 			}
 		}
-
-		void drawLines() {
-						for (int i = 0; i<couplings.GetLength(0); i++) {
-
-								if (couplings [i, 0] != -1) {
-	
-										GameObject parentBuilding = (GameObject) allBuildings [i];
-										LineRenderer lineRenderer = parentBuilding.AddComponent<LineRenderer> ();
-										lineRenderer.material = new Material (Shader.Find ("Particles/Additive"));
-										lineRenderer.SetColors (Color.yellow, Color.red);
-										lineRenderer.SetWidth (0.2F, 0.7F);
-										lineRenderer.SetVertexCount (2);
-										float parentX = positions [i, 0];
-										float parentZ = positions [i, 1];
-										int childIndex = couplings [i, 1];
-
-										float childX = positions [childIndex, 0];
-										float childZ = positions [childIndex, 1];
-
-										Vector3 parentPos = new Vector3 (parentX, 1, parentZ);
-										Vector3 childPos = new Vector3 (childX, 1, childZ);
-										lineRenderer.SetPosition (0, parentPos);
-										lineRenderer.SetPosition (1, childPos);
-
-								}
-
-						}
-				}
 		
-		void Update () {
-			foreach (TextMesh b in arrayBuildingLabels) {
-				//someTextMesh.transform.rotation = Camera.main.transform.rotation
-				// b.transform.rotation = Camera.main.transform.rotation;
+		void drawLines() {
+			for (int i = 0; i<couplings.GetLength(0); i++) {
+				
+				if (couplings [i, 0] != -1) {
+					
+					GameObject parentBuilding = (GameObject) allBuildings [i];
+					LineRenderer lineRenderer = parentBuilding.AddComponent<LineRenderer> ();
+					lineRenderer.material = new Material (Shader.Find ("Particles/Additive"));
+					lineRenderer.SetColors (Color.yellow, Color.red);
+					lineRenderer.SetWidth (0.1F, 1F);
+					lineRenderer.SetVertexCount (2);
+					float parentX = positions [i, 0];
+					float parentZ = positions [i, 1];
+					int childIndex = couplings [i, 1];
+					
+					float childX = positions [childIndex, 0];
+					float childZ = positions [childIndex, 1];
+					
+					
+					
+					Vector3 parentPos = new Vector3 (parentX, 1, parentZ);
+					Vector3 childPos = new Vector3 (childX, 1, childZ);
+					
+					
+					
+					
+					//same row, needs to curve
+					if (childX == parentX && Mathf.Abs(childZ - parentZ) > 3){
+						
+						lineRenderer.SetVertexCount(3);
+						
+						float curveX = parentX;
+						
+						if (parentX == 0){
+							curveX -= 5;
+						}else{
+							curveX += 5;
+						}
+						
+						
+						Vector3 curvePosX = new Vector3(curveX, 1, (parentZ+childZ)/2);
+						lineRenderer.SetPosition (0, parentPos);
+						lineRenderer.SetPosition (1, curvePosX);
+						lineRenderer.SetPosition (2, childPos);
+						
+						
+					}else if (childZ == parentZ && Mathf.Abs(childX - parentX)  > 3){
+						
+						lineRenderer.SetVertexCount(3);
+						
+						float curveZ = parentZ;
+						
+						if (parentZ == 0){
+							curveZ -= 5;
+						}else{
+							curveZ += 5;
+						}
+						
+						Vector3 curvePosZ = new Vector3((parentX+childX)/2f, 1, curveZ);
+						lineRenderer.SetPosition (0, parentPos);
+						lineRenderer.SetPosition (1, curvePosZ);
+						lineRenderer.SetPosition (2, childPos);
+						
+					}else {	
+						
+						lineRenderer.SetPosition (0, parentPos);
+						lineRenderer.SetPosition (1, childPos);
+					}	
+					
+					
+					
+					
+					
+					
+					
+					
+				}
 				
 			}
 		}
+		
+		void Update () {
+			//foreach (TextMesh b in arrayBuildingLabels) {
+			//someTextMesh.transform.rotation = Camera.main.transform.rotation
+			// b.transform.rotation = Camera.main.transform.rotation;
+			
+			//}
+		}
 	}
 }
+
