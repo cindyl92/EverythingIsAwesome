@@ -1,0 +1,78 @@
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.MalformedURLException;
+import java.net.URL;
+
+/*This is a test block
+more comments
+more comments
+LOC = 18
+Comments = 8
+CommentDensity = Math.Round((8/(18+8))*100) = 31 */
+
+
+public class FreqTableExampleOriginal {
+
+    public static final int NUM_ASCII_CHAR = 128;
+
+    // program to create a frequency table.
+    // Example of simple try catch blocks to deal with checked exceptions
+    public static void main(String[] args)
+        {
+
+        int[] freqs = createFreqTableURL("http://www.utexas.edu/");
+	int bob=0;
+
+        if( freqs.length == 0)
+            System.out.println("No frequency table created due to problems when reading from file");
+        else{
+            for(int i = 0; i < NUM_ASCII_CHAR; i++){
+                System.out.println("charcater code: " + i + " ,character: " + (char)i + " ,frequency: " + freqs[i]);
+            }
+            System.out.println("Total characters in file: " + sum(freqs));
+        }
+@#$
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.MalformedURLException;
+import java.net.URL;
+
+/*This is a test block
+more comments
+more comments
+LOC = 19
+Comments = 10
+CommentDensity = Math.Round((10/(19+10))*100) = 34 */
+
+
+public class FreqTableExampleOriginal {
+
+    public static final int NUM_ASCII_CHAR = 128;
+
+    // program to create a frequency table.
+    // Example of simple try catch blocks to deal with checked exceptions
+    public static void main(String[] args)
+        {
+
+        int[] freqs = createFreqTableURL("http://www.utexas.edu/");
+    int bob=0;
+
+        if( freqs.length == 0)
+            System.out.println("No frequency table created due to problems when reading from file");
+        else{
+            for(int i = 0; i < NUM_ASCII_CHAR; i++){
+                System.out.println("charcater code: " + i + " ,character: " + (char)i + " ,frequency: " + freqs[i]);
+            }
+            System.out.println("Total characters in file: " + sum(freqs));
+        }
+
+//alsdkjfalskd alskdjf lasd alskdjf laskdj
+sldflasdjf lasd
+/*askdjflaksdjflaksjdflaksdf8*/
+@#$

@@ -1,0 +1,2002 @@
+package com.robotium.solo;
+
+import java.lang.ref.WeakReference;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.Stack;
+import java.util.Timer;
+import junit.framework.Assert;
+import android.app.Activity;
+import android.app.Instrumentation;
+import android.app.Instrumentation.ActivityMonitor;
+import android.content.IntentFilter;
+import android.util.Log;
+import android.view.KeyEvent;
+
+
+/**
+ * Contains activity related methods. Examples are:
+ * getCurrentActivity(), getActivityMonitor(), setActivityOrientation(int orientation).
+ * 
+ * @author Renas Reda, renas.reda@robotium.com
+ * 
+ */
+
+class ActivityUtils {
+
+	private final Instrumentation inst;
+	private ActivityMonitor activityMonitor;
+	private Activity activity;
+	private final Sleeper sleeper;
+	private final String LOG_TAG = "Robotium";
+	private final int MINISLEEP = 100;
+	private Stack<WeakReference<Activity>> activityStack;
+	private WeakReference<Activity> weakActivityReference;
+	private Stack<String> activitiesStoredInActivityStack;
+	private Timer activitySyncTimer;
+	private boolean registerActivities;
+	Thread activityThread;
+
+	/**
+	 * Constructs this object.
+	 *
+	 * @param inst the {@code Instrumentation} instance.
+	 * @param activity the start {@code Activity}
+	 * @param sleeper the {@code Sleeper} instance
+	 */
+
+	public ActivityUtils(Instrumentation inst, Activity activity, Sleeper sleeper) {
+		this.inst = inst;
+		this.activity = activity;
+		this.sleeper = sleeper;
+		createStackAndPushStartActivity();
+		activitySyncTimer = new Timer();
+		activitiesStoredInActivityStack = new Stack<String>();
+		setupActivityMonitor();
+		setupActivityStackListener();
+	}
+
+
+
+	/**
+	 * Creates a new activity stack and pushes the start activity. 
+	 */
+
+	private void createStackAndPushStartActivity(){
+		activityStack = new Stack<WeakReference<Activity>>();
+		if (activity != null){
+			WeakReference<Activity> weakReference = new WeakReference<Activity>(activity);
+			activity = null;
+			activityStack.push(weakReference);
+		}
+	}
+	
+
+	/**
+	 * Returns a {@code List} of all the opened/active activities.
+	 * 
+	 * @return a {@code List} of all the opened/active activities
+	 */
+
+	public ArrayList<Activity> getAllOpenedActivities()
+	{
+		ArrayList<Activity> activities = new ArrayList<Activity>();
+		Iterator<WeakReference<Activity>> activityStackIterator = activityStack.iterator();
+
+		while(activityStackIterator.hasNext()){
+			Activity  activity = activityStackIterator.next().get();
+			if(activity!=null)
+				activities.add(activity);
+		}
+		return activities;
+	}
+
+	/**
+	 * This is were the activityMonitor is set up. The monitor will keep check
+	 * for the currently active activity.
+	 */
+
+	private void setupActivityMonitor() {
+
+		try {
+			IntentFilter filter = null;
+			activityMonitor = inst.addMonitor(filter, null, false);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+	
+	
+	/**
+	 * Returns true if registration of Activites should be performed
+	 * 
+	 * @return true if registration of Activities should be performed
+	 */
+	
+	public boolean shouldRegisterActivities() {
+		return registerActivities;
+	}
+
+
+	/**
+	 * Set true if registration of Activities should be performed
+	 * @param registerActivities true if registration of Activities should be performed
+	 * 
+	 */
+	
+	public void setRegisterActivities(boolean registerActivities) {
+		this.registerActivities = registerActivities;
+	}
+
+	/**
+	 * This is were the activityStack listener is set up. The listener will keep track of the
+	 * opened activities and their positions.
+	 */
+
+	private void setupActivityStackListener() {
+		setRegisterActivities(true);
+		
+		Runnable runnable = new Runnable() {
+			public void run() {
+				while (shouldRegisterActivities()) {
+					
+					Activity activity = activityMonitor.waitForActivity();
+
+					if(activity != null){
+						if (activitiesStoredInActivityStack.remove(activity.toString())){
+							removeActivityFromStack(activity);
+						}
+						if(!activity.isFinishing()){
+							addActivityToStack(activity);
+						}
+					}
+				}
+			}
+		};
+		activityThread = new Thread(runnable, "activityMonitorThread");
+		activityThread.start();
+	}
+
+	/**
+	 * Removes a given activity from the activity stack
+	 * 
+	 * @param activity the activity to remove
+	 */
+
+	private void removeActivityFromStack(Activity activity){
+
+		Iterator<WeakReference<Activity>> activityStackIterator = activityStack.iterator();
+		while(activityStackIterator.hasNext()){
+			Activity activityFromWeakReference = activityStackIterator.next().get();
+
+			if(activityFromWeakReference == null){
+				activityStackIterator.remove();
+			}
+
+			if(activity != null && activityFromWeakReference != null && activityFromWeakReference.equals(activity)){
+				activityStackIterator.remove();
+			}
+		}
+	}
+
+	/**
+	 * Returns the ActivityMonitor used by Robotium.
+	 * 
+	 * @return the ActivityMonitor used by Robotium
+	 */
+
+	public ActivityMonitor getActivityMonitor(){
+		return activityMonitor;
+	}
+
+	/**
+	 * Sets the Orientation (Landscape/Portrait) for the current activity.
+	 * 
+	 * @param orientation An orientation constant such as {@link android.content.pm.ActivityInfo#SCREEN_ORIENTATION_LANDSCAPE} or {@link android.content.pm.ActivityInfo#SCREEN_ORIENTATION_PORTRAIT}
+	 */
+
+	public void setActivityOrientation(int orientation)
+	{
+		Activity activity = getCurrentActivity();
+		activity.setRequestedOrientation(orientation);	
+	}
+
+	/**
+	 * Returns the current {@code Activity}, after sleeping a default pause length.
+	 *
+	 * @param shouldSleepFirst whether to sleep a default pause first
+	 * @return the current {@code Activity}
+	 */
+
+	public Activity getCurrentActivity(boolean shouldSleepFirst) {
+		return getCurrentActivity(shouldSleepFirst, true);
+	}
+
+	/**
+	 * Returns the current {@code Activity}, after sleeping a default pause length.
+	 *
+	 * @return the current {@code Activity}
+	 */
+
+	public Activity getCurrentActivity() {
+		return getCurrentActivity(true, true);
+	}
+
+	/**
+	 * Adds an activity to the stack
+	 * 
+	 * @param activity the activity to add
+	 */
+
+	private void addActivityToStack(Activity activity){
+		activitiesStoredInActivityStack.push(activity.toString());
+		weakActivityReference = new WeakReference<Activity>(activity);
+		activity = null;
+		activityStack.push(weakActivityReference);
+	}
+
+	/**
+	 * Waits for an activity to be started if one is not provided
+	 * by the constructor.
+	 */
+
+	private final void waitForActivityIfNotAvailable(){
+		if(activityStack.isEmpty() || activityStack.peek().get() == null){
+
+			if (activityMonitor != null) {
+				Activity activity = activityMonitor.getLastActivity();
+				while (activity == null){
+					sleeper.sleepMini();
+					activity = activityMonitor.getLastActivity();
+				}
+				addActivityToStack(activity);
+			}
+			else{
+				sleeper.sleepMini();
+				setupActivityMonitor();
+				waitForActivityIfNotAvailable();
+			}
+		}
+	}
+	
+	/**
+	 * Returns the name of the most recent Activity
+	 *  
+	 * @return the name of the current {@code Activity}
+	 */
+	
+	public String getCurrentActivityName(){
+		if(!activitiesStoredInActivityStack.isEmpty()){
+			return activitiesStoredInActivityStack.peek();
+		}
+		return "";
+	}
+
+	/**
+	 * Returns the current {@code Activity}.
+	 *
+	 * @param shouldSleepFirst whether to sleep a default pause first
+	 * @param waitForActivity whether to wait for the activity
+	 * @return the current {@code Activity}
+	 */
+
+	public Activity getCurrentActivity(boolean shouldSleepFirst, boolean waitForActivity) {
+		if(shouldSleepFirst){
+			sleeper.sleep();
+		}
+		if(waitForActivity){
+			waitForActivityIfNotAvailable();
+		}
+		if(!activityStack.isEmpty()){
+			activity=activityStack.peek().get();
+		}
+		return activity;
+	}
+
+	/**
+	 * Check if activity stack is empty.
+	 * 
+	 * @return true if activity stack is empty
+	 */
+	
+	public boolean isActivityStackEmpty() {
+		return activityStack.isEmpty();
+	}
+
+	/**
+	 * Returns to the given {@link Activity}.
+	 *
+	 * @param name the name of the {@code Activity} to return to, e.g. {@code "MyActivity"}
+	 */
+
+	public void goBackToActivity(String name)
+	{
+		ArrayList<Activity> activitiesOpened = getAllOpenedActivities();
+		boolean found = false;	
+		for(int i = 0; i < activitiesOpened.size(); i++){
+			if(activitiesOpened.get(i).getClass().getSimpleName().equals(name)){
+				found = true;
+				break;
+			}
+		}
+		if(found){
+			while(!getCurrentActivity().getClass().getSimpleName().equals(name))
+			{
+				try{
+					inst.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK);
+				}catch(SecurityException ignored){}	
+			}
+		}
+		else{
+			for (int i = 0; i < activitiesOpened.size(); i++){
+				Log.d(LOG_TAG, "Activity priorly opened: "+ activitiesOpened.get(i).getClass().getSimpleName());
+			}
+			Assert.fail("No Activity named: '" + name + "' has been priorly opened");
+		}
+	}
+
+	/**
+	 * Returns a localized string.
+	 * 
+	 * @param resId the resource ID for the string
+	 * @return the localized string
+	 */
+
+	public String getString(int resId)
+	{
+		Activity activity = getCurrentActivity(false);
+		return activity.getString(resId);
+	}
+
+	/**
+	 * Finalizes the solo object.
+	 */  
+
+	@Override
+	public void finalize() throws Throwable {
+		activitySyncTimer.cancel();
+		try {
+			// Remove the monitor added during startup
+			if (activityMonitor != null) {
+				inst.removeMonitor(activityMonitor);
+				activityMonitor = null;
+			}
+		} catch (Exception ignored) {}
+		super.finalize();
+	}
+
+	/**
+	 * All activites that have been opened are finished.
+	 */
+
+	public void finishOpenedActivities(){
+		// Stops the activityStack listener
+		activitySyncTimer.cancel();
+		ArrayList<Activity> activitiesOpened = getAllOpenedActivities();
+		// Finish all opened activities
+		for (int i = activitiesOpened.size()-1; i >= 0; i--) {
+			sleeper.sleep(MINISLEEP);
+			finishActivity(activitiesOpened.get(i));
+		}
+		activitiesOpened = null;
+		sleeper.sleep(MINISLEEP);
+		// Finish the initial activity, pressing Back for good measure
+		finishActivity(getCurrentActivity(true, false));
+		setRegisterActivities(false);
+		this.activity = null;
+		sleeper.sleepMini();
+		try {
+			inst.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK);
+			sleeper.sleep(MINISLEEP);
+			inst.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK);
+		} catch (Throwable ignored) {
+			// Guard against lack of INJECT_EVENT permission
+		}
+		clearActivityStack();
+	}
+
+	/**
+	 * Clears the activity stack.
+	 */
+
+	private void clearActivityStack(){
+		
+		activityStack.clear();
+		activitiesStoredInActivityStack.clear();
+	}
+
+	/**
+	 * Finishes an activity.
+	 * 
+	 * @param activity the activity to finish
+	 */
+
+	private void finishActivity(Activity activity){
+		if(activity != null) {
+			try{
+				activity.finish();
+			}catch(Throwable e){
+				e.printStackTrace();
+			}
+		}
+	}
+}
+@#$
+package com.robotium.solo;
+
+import junit.framework.Assert;
+import android.app.Activity;
+import android.app.ActivityManager;
+
+/**
+ * Contains assert methods examples are assertActivity() and assertLowMemory().
+ * 
+ * @author Renas Reda, renas.reda@robotium.com
+ *
+ */
+
+class Asserter {
+	private final ActivityUtils activityUtils;
+	private final Waiter waiter;
+
+	/**
+	 * Constructs this object.
+	 *
+	 * @param activityUtils the {@code ActivityUtils} instance.
+	 * @param waiter the {@code Waiter} instance.
+	 */
+
+	public Asserter(ActivityUtils activityUtils, Waiter waiter) {
+		this.activityUtils = activityUtils;
+		this.waiter = waiter;
+	}
+
+	/**
+	 * Asserts that an expected {@link Activity} is currently active one.
+	 *
+	 * @param message the message that should be displayed if the assert fails
+	 * @param name the name of the {@code Activity} that is expected to be active e.g. {@code "MyActivity"}
+	 */
+
+	public void assertCurrentActivity(String message, String name) {
+		boolean foundActivity = waiter.waitForActivity(name);
+
+		if(!foundActivity)
+			Assert.assertEquals(message, name, activityUtils.getCurrentActivity().getClass().getSimpleName());		
+	}
+
+	/**
+	 * Asserts that an expected {@link Activity} is currently active one.
+	 *
+	 * @param message the message that should be displayed if the assert fails
+	 * @param expectedClass the {@code Class} object that is expected to be active e.g. {@code MyActivity.class}
+	 */
+
+	public void assertCurrentActivity(String message, Class<? extends Activity> expectedClass) {
+		if(expectedClass == null){
+			Assert.fail("The specified Activity is null!");
+		}
+		
+		boolean foundActivity = waiter.waitForActivity(expectedClass);
+
+		if(!foundActivity) {
+			Assert.assertEquals(message, expectedClass.getName(), activityUtils.getCurrentActivity().getClass().getName());
+		}
+	}
+
+	/**
+	 * Asserts that an expected {@link Activity} is currently active one, with the possibility to
+	 * verify that the expected {@code Activity} is a new instance of the {@code Activity}.
+	 * 
+	 * @param message the message that should be displayed if the assert fails
+	 * @param name the name of the {@code Activity} that is expected to be active e.g. {@code "MyActivity"}
+	 * @param isNewInstance {@code true} if the expected {@code Activity} is a new instance of the {@code Activity}
+	 */
+
+	public void assertCurrentActivity(String message, String name, boolean isNewInstance) {
+		assertCurrentActivity(message, name);
+		assertCurrentActivity(message, activityUtils.getCurrentActivity().getClass(),
+				isNewInstance);
+	}
+
+	/**
+	 * Asserts that an expected {@link Activity} is currently active one, with the possibility to
+	 * verify that the expected {@code Activity} is a new instance of the {@code Activity}.
+	 * 
+	 * @param message the message that should be displayed if the assert fails
+	 * @param expectedClass the {@code Class} object that is expected to be active e.g. {@code MyActivity.class}
+	 * @param isNewInstance {@code true} if the expected {@code Activity} is a new instance of the {@code Activity}
+	 */
+
+	public void assertCurrentActivity(String message, Class<? extends Activity> expectedClass,
+			boolean isNewInstance) {
+		boolean found = false;
+		assertCurrentActivity(message, expectedClass);
+		Activity activity = activityUtils.getCurrentActivity(false);
+		for (int i = 0; i < activityUtils.getAllOpenedActivities().size() - 1; i++) {
+			String instanceString = activityUtils.getAllOpenedActivities().get(i).toString();
+			if (instanceString.equals(activity.toString()))
+				found = true;
+		}
+		Assert.assertNotSame(message, isNewInstance, found);
+	}
+
+	/**
+	 * Asserts that the available memory is not considered low by the system.
+	 */
+
+	public void assertMemoryNotLow() {
+		ActivityManager.MemoryInfo mi = new ActivityManager.MemoryInfo();
+		((ActivityManager)activityUtils.getCurrentActivity().getSystemService("activity")).getMemoryInfo(mi);
+		Assert.assertFalse("Low memory available: " + mi.availMem + " bytes!", mi.lowMemory);
+	}
+
+}
+@#$
+package com.robotium.solo;
+
+/**
+ * Used in conjunction with the web methods. Examples are By.id(String id) and By.cssSelector(String selector).
+ * 
+ * @author Renas Reda, renas.reda@robotium.com
+ * 
+ */
+
+public abstract class By {
+
+	/**
+	 * Select a WebElement by its id.
+	 * 
+	 * @param id the id of the web element	
+	 * @return the Id object
+	 */
+
+	public static By id(final String id) {
+		return new Id(id); 
+
+	}
+
+	/**
+	 * Select a WebElement by its xpath.
+	 * 
+	 * @param xpath the xpath of the web element
+	 * @return the Xpath object
+	 */
+
+	public static By xpath(final String xpath) {
+		return new Xpath(xpath); 
+
+	}
+
+	/**
+	 * Select a WebElement by its css selector.
+	 * 
+	 * @param selectors the css selector of the web element
+	 * @return the CssSelector object
+	 */
+
+	public static By cssSelector(final String selectors) {
+		return new CssSelector(selectors); 
+
+	}
+
+	/**
+	 * Select a WebElement by its name.
+	 * 
+	 * @param name the name of the web element
+	 * @return the Name object
+	 */
+
+	public static By name(final String name) {
+		return new Name(name); 
+
+	}
+
+	/**
+	 * Select a WebElement by its class name.
+	 * 
+	 * @param className the class name of the web element
+	 * @return the ClassName object
+	 */
+
+	public static By className(final String className) {
+		return new ClassName(className); 
+
+	}
+
+	/**
+	 * Select a WebElement by its text content.
+	 * 
+	 * @param textContent the text content of the web element
+	 * @return the TextContent object
+	 */
+
+	public static By textContent(final String textContent) {
+		return new Text(textContent); 
+
+	}
+	
+	/**
+	 * Select a WebElement by its tag name.
+	 * 
+	 * @param tagName the tag name of the web element
+	 * @return the TagName object
+	 */
+
+	public static By tagName(final String tagName) {
+		return new TagName(tagName); 
+
+	}
+
+	/**
+	 * Returns the value. 
+	 * 
+	 * @return the value
+	 */
+	
+	public String getValue(){
+		return "";
+	}
+
+
+	static class Id extends By {
+		private final String id;
+
+		public Id(String id) {
+			this.id = id;
+		}
+
+		@Override
+		public String getValue(){
+			return id;
+		}
+	}
+
+	static class Xpath extends By {
+		private final String xpath;
+
+		public Xpath(String xpath) {
+			this.xpath = xpath;
+		}
+
+		@Override
+		public String getValue(){
+			return xpath;
+		}
+	}
+
+	static class CssSelector extends By {
+		private final String selector;
+
+		public CssSelector(String selector) {
+			this.selector = selector;
+		}
+
+		@Override
+		public String getValue(){
+			return selector;
+		}
+	}
+
+	static class Name extends By {
+		private final String name;
+
+		public Name(String name) {
+			this.name = name;
+		}
+
+		@Override
+		public String getValue(){
+			return name;
+		}
+	}
+	
+	static class ClassName extends By {
+		private final String className;
+
+		public ClassName(String className) {
+			this.className = className;
+		}
+
+		@Override
+		public String getValue(){
+			return className;
+		}
+	}
+	
+	static class Text extends By {
+		private final String textContent;
+
+		public Text(String textContent) {
+			this.textContent = textContent;
+		}
+
+		@Override
+		public String getValue(){
+			return textContent;
+		}
+	}
+	
+	static class TagName extends By {
+		private final String tagName;
+		
+		public TagName(String tagName){
+			this.tagName = tagName;
+		}
+		
+		@Override
+		public String getValue(){
+			return tagName;
+		}
+	}
+}
+@#$
+package com.robotium.solo;
+
+/**
+ * Used in conjunction with the web methods. Examples are By.id(String id) and By.cssSelector(String selector).
+ * 
+ * @author Renas Reda, renas.reda@robotium.com
+ * 
+ */
+
+public abstract class By {
+
+	/**
+	 * Select a WebElement by its id.
+	 * 
+	 * @param id the id of the web element	
+	 * @return the Id object
+	 */
+
+	public static By id(final String id) {
+		return new Id(id); 
+
+	}
+
+	/**
+	 * Select a WebElement by its xpath.
+	 * 
+	 * @param xpath the xpath of the web element
+	 * @return the Xpath object
+	 */
+
+	public static By xpath(final String xpath) {
+		return new Xpath(xpath); 
+
+	}
+
+	/**
+	 * Select a WebElement by its css selector.
+	 * 
+	 * @param selectors the css selector of the web element
+	 * @return the CssSelector object
+	 */
+
+	public static By cssSelector(final String selectors) {
+		return new CssSelector(selectors); 
+
+	}
+
+	/**
+	 * Select a WebElement by its name.
+	 * 
+	 * @param name the name of the web element
+	 * @return the Name object
+	 */
+
+	public static By name(final String name) {
+		return new Name(name); 
+
+	}
+
+	/**
+	 * Select a WebElement by its class name.
+	 * 
+	 * @param className the class name of the web element
+	 * @return the ClassName object
+	 */
+
+	public static By className(final String className) {
+		return new ClassName(className); 
+
+	}
+
+	/**
+	 * Select a WebElement by its text content.
+	 * 
+	 * @param textContent the text content of the web element
+	 * @return the TextContent object
+	 */
+
+	public static By textContent(final String textContent) {
+		return new Text(textContent); 
+
+	}
+	
+	/**
+	 * Select a WebElement by its tag name.
+	 * 
+	 * @param tagName the tag name of the web element
+	 * @return the TagName object
+	 */
+
+	public static By tagName(final String tagName) {
+		return new TagName(tagName); 
+
+	}
+
+	/**
+	 * Returns the value. 
+	 * 
+	 * @return the value
+	 */
+	
+	public String getValue(){
+		return "";
+	}
+
+
+	static class Id extends By {
+		private final String id;
+
+		public Id(String id) {
+			this.id = id;
+		}
+
+		@Override
+		public String getValue(){
+			return id;
+		}
+	}
+
+	static class Xpath extends By {
+		private final String xpath;
+
+		public Xpath(String xpath) {
+			this.xpath = xpath;
+		}
+
+		@Override
+		public String getValue(){
+			return xpath;
+		}
+	}
+
+	static class CssSelector extends By {
+		private final String selector;
+
+		public CssSelector(String selector) {
+			this.selector = selector;
+		}
+
+		@Override
+		public String getValue(){
+			return selector;
+		}
+	}
+
+	static class Name extends By {
+		private final String name;
+
+		public Name(String name) {
+			this.name = name;
+		}
+
+		@Override
+		public String getValue(){
+			return name;
+		}
+	}
+	
+	static class ClassName extends By {
+		private final String className;
+
+		public ClassName(String className) {
+			this.className = className;
+		}
+
+		@Override
+		public String getValue(){
+			return className;
+		}
+	}
+	
+	static class Text extends By {
+		private final String textContent;
+
+		public Text(String textContent) {
+			this.textContent = textContent;
+		}
+
+		@Override
+		public String getValue(){
+			return textContent;
+		}
+	}
+	
+	static class TagName extends By {
+		private final String tagName;
+		
+		public TagName(String tagName){
+			this.tagName = tagName;
+		}
+		
+		@Override
+		public String getValue(){
+			return tagName;
+		}
+	}
+}
+@#$
+package com.robotium.solo;
+
+import java.util.ArrayList;
+import android.widget.CheckedTextView;
+import android.widget.CompoundButton;
+import android.widget.Spinner;
+import android.widget.TextView;
+
+
+/**
+ * Contains various check methods. Examples are: isButtonChecked(),
+ * isSpinnerTextSelected.
+ * 
+ * @author Renas Reda, renas.reda@robotium.com
+ * 
+ */
+
+class Checker {
+	
+	private final ViewFetcher viewFetcher;
+	private final Waiter waiter;
+
+	/**
+	 * Constructs this object.
+	 * 
+	 * @param viewFetcher the {@code ViewFetcher} instance
+     * @param waiter the {@code Waiter} instance
+	 */
+	
+	public Checker(ViewFetcher viewFetcher, Waiter waiter){
+		this.viewFetcher = viewFetcher;
+		this.waiter = waiter;
+	}
+
+	
+	/**
+	 * Checks if a {@link CompoundButton} with a given index is checked.
+	 *
+	 * @param expectedClass the expected class, e.g. {@code CheckBox.class} or {@code RadioButton.class}
+	 * @param index of the {@code CompoundButton} to check. {@code 0} if only one is available
+	 * @return {@code true} if {@code CompoundButton} is checked and {@code false} if it is not checked
+	 */
+	
+	public <T extends CompoundButton> boolean isButtonChecked(Class<T> expectedClass, int index)
+	{
+		return (waiter.waitForAndGetView(index, expectedClass).isChecked());
+	}
+	
+	/**
+	 * Checks if a {@link CompoundButton} with a given text is checked.
+	 *
+	 * @param expectedClass the expected class, e.g. {@code CheckBox.class} or {@code RadioButton.class}
+	 * @param text the text that is expected to be checked
+	 * @return {@code true} if {@code CompoundButton} is checked and {@code false} if it is not checked
+	 */
+
+	public <T extends CompoundButton> boolean isButtonChecked(Class<T> expectedClass, String text)
+	{
+		T button = waiter.waitForText(expectedClass, text, 0, Timeout.getSmallTimeout(), true);
+
+		if(button != null && button.isChecked()){
+			return true;
+		}
+		return false;
+	}
+
+	/**
+	 * Checks if a {@link CheckedTextView} with a given text is checked.
+	 *
+	 * @param checkedTextView the {@code CheckedTextView} object
+	 * @param text the text that is expected to be checked
+	 * @return {@code true} if {@code CheckedTextView} is checked and {@code false} if it is not checked
+	 */
+
+	public boolean isCheckedTextChecked(String text)
+	{
+		CheckedTextView checkedTextView = waiter.waitForText(CheckedTextView.class, text, 0, Timeout.getSmallTimeout(), true);
+
+		if(checkedTextView != null && checkedTextView.isChecked()) {
+			return true;
+		}
+		return false;
+	}
+
+	
+	/**
+	 * Checks if a given text is selected in any {@link Spinner} located on the current screen.
+	 * 
+	 * @param text the text that is expected to be selected
+	 * @return {@code true} if the given text is selected in any {@code Spinner} and false if it is not
+	 */
+	
+	public boolean isSpinnerTextSelected(String text)
+	{
+		waiter.waitForAndGetView(0, Spinner.class);
+				
+		ArrayList<Spinner> spinnerList = viewFetcher.getCurrentViews(Spinner.class, true);
+		for(int i = 0; i < spinnerList.size(); i++){
+			if(isSpinnerTextSelected(i, text))
+					return true;
+		}
+		return false;
+	}
+	
+	/**
+	 * Checks if a given text is selected in a given {@link Spinner} 
+	 * @param spinnerIndex the index of the spinner to check. 0 if only one spinner is available
+	 * @param text the text that is expected to be selected
+	 * @return true if the given text is selected in the given {@code Spinner} and false if it is not
+	 */
+	
+	public boolean isSpinnerTextSelected(int spinnerIndex, String text)
+	{
+		Spinner spinner = waiter.waitForAndGetView(spinnerIndex, Spinner.class);
+		
+		TextView textView = (TextView) spinner.getChildAt(0);
+		if(textView.getText().equals(text))
+			return true;
+		else
+			return false;
+	}
+}
+@#$
+package com.robotium.solo;
+
+import java.lang.reflect.Constructor;
+import java.util.ArrayList;
+import java.util.Collection;
+import junit.framework.Assert;
+import android.app.Activity;
+import android.app.Instrumentation;
+import android.content.Context;
+import android.os.SystemClock;
+import android.util.Log;
+import android.view.KeyEvent;
+import android.view.MenuItem;
+import android.view.MotionEvent;
+import android.view.View;
+import android.view.ViewConfiguration;
+import android.view.Window;
+import android.widget.AbsListView;
+import android.widget.TextView;
+
+/**
+ * Contains various click methods. Examples are: clickOn(),
+ * clickOnText(), clickOnScreen().
+ *
+ * @author Renas Reda, renas.reda@robotium.com
+ *
+ */
+
+class Clicker {
+
+	private final String LOG_TAG = "Robotium";
+	private final ActivityUtils activityUtils;
+	private final ViewFetcher viewFetcher;
+	private final Instrumentation inst;
+	private final Sender sender;
+	private final Sleeper sleeper;
+	private final Waiter waiter;
+	private final WebUtils webUtils;
+	private final DialogUtils dialogUtils;
+	private final int MINI_WAIT = 200;
+	private final int WAIT_TIME = 1500;
+
+
+	/**
+	 * Constructs this object.
+	 *
+	 * @param activityUtils the {@code ActivityUtils} instance
+	 * @param viewFetcher the {@code ViewFetcher} instance
+	 * @param sender the {@code Sender} instance
+	 * @param inst the {@code android.app.Instrumentation} instance
+	 * @param sleeper the {@code Sleeper} instance
+	 * @param waiter the {@code Waiter} instance
+	 * @param webUtils the {@code WebUtils} instance
+	 * @param dialogUtils the {@code DialogUtils} instance
+	 */
+
+	public Clicker(ActivityUtils activityUtils, ViewFetcher viewFetcher, Sender sender, Instrumentation inst, Sleeper sleeper, Waiter waiter, WebUtils webUtils, DialogUtils dialogUtils) {
+
+		this.activityUtils = activityUtils;
+		this.viewFetcher = viewFetcher;
+		this.sender = sender;
+		this.inst = inst;
+		this.sleeper = sleeper;
+		this.waiter = waiter;
+		this.webUtils = webUtils;
+		this.dialogUtils = dialogUtils;
+	}
+
+	/**
+	 * Clicks on a given coordinate on the screen.
+	 *
+	 * @param x the x coordinate
+	 * @param y the y coordinate
+	 */
+
+	public void clickOnScreen(float x, float y, View view) {
+		boolean successfull = false;
+		int retry = 0;
+		SecurityException ex = null;
+
+		while(!successfull && retry < 10) {
+			long downTime = SystemClock.uptimeMillis();
+			long eventTime = SystemClock.uptimeMillis();
+			MotionEvent event = MotionEvent.obtain(downTime, eventTime,
+					MotionEvent.ACTION_DOWN, x, y, 0);
+			MotionEvent event2 = MotionEvent.obtain(downTime, eventTime,
+					MotionEvent.ACTION_UP, x, y, 0);
+			try{
+				inst.sendPointerSync(event);
+				inst.sendPointerSync(event2);
+				successfull = true;
+			}catch(SecurityException e){
+				ex = e;
+				dialogUtils.hideSoftKeyboard(null, false, true);
+				sleeper.sleep(MINI_WAIT);
+				retry++;
+				View identicalView = viewFetcher.getIdenticalView(view);
+				if(identicalView != null){
+					float[] xyToClick = getClickCoordinates(identicalView);
+					x = xyToClick[0]; 
+					y = xyToClick[1];
+				}
+			}
+		}
+		if(!successfull) {
+			Assert.fail("Click at ("+x+", "+y+") can not be completed! ("+(ex != null ? ex.getClass().getName()+": "+ex.getMessage() : "null")+")");
+		}
+	}
+
+	/**
+	 * Long clicks a given coordinate on the screen.
+	 *
+	 * @param x the x coordinate
+	 * @param y the y coordinate
+	 * @param time the amount of time to long click
+	 */
+
+	public void clickLongOnScreen(float x, float y, int time, View view) {
+		boolean successfull = false;
+		int retry = 0;
+		SecurityException ex = null;
+		long downTime = SystemClock.uptimeMillis();
+		long eventTime = SystemClock.uptimeMillis();
+		MotionEvent event = MotionEvent.obtain(downTime, eventTime, MotionEvent.ACTION_DOWN, x, y, 0);
+
+		while(!successfull && retry < 10) {
+			try{
+				inst.sendPointerSync(event);
+				successfull = true;
+				sleeper.sleep(MINI_WAIT);
+			}catch(SecurityException e){
+				ex = e;
+				dialogUtils.hideSoftKeyboard(null, false, true);
+				sleeper.sleep(MINI_WAIT);
+				retry++;
+				View identicalView = viewFetcher.getIdenticalView(view);
+				if(identicalView != null){
+					float[] xyToClick = getClickCoordinates(identicalView);
+					x = xyToClick[0];
+					y = xyToClick[1];
+				}
+			}
+		}
+		if(!successfull) {
+			Assert.fail("Long click at ("+x+", "+y+") can not be completed! ("+(ex != null ? ex.getClass().getName()+": "+ex.getMessage() : "null")+")");
+		}
+
+		eventTime = SystemClock.uptimeMillis();
+		event = MotionEvent.obtain(downTime, eventTime, MotionEvent.ACTION_MOVE, x + 1.0f, y + 1.0f, 0);
+		inst.sendPointerSync(event);
+		if(time > 0)
+			sleeper.sleep(time);
+		else
+			sleeper.sleep((int)(ViewConfiguration.getLongPressTimeout() * 2.5f));
+
+		eventTime = SystemClock.uptimeMillis();
+		event = MotionEvent.obtain(downTime, eventTime, MotionEvent.ACTION_UP, x, y, 0);
+		inst.sendPointerSync(event);
+		sleeper.sleep();
+	}
+
+
+	/**
+	 * Clicks on a given {@link View}.
+	 *
+	 * @param view the view that should be clicked
+	 */
+
+	public void clickOnScreen(View view) {
+		clickOnScreen(view, false, 0);
+	}
+
+	/**
+	 * Private method used to click on a given view.
+	 *
+	 * @param view the view that should be clicked
+	 * @param longClick true if the click should be a long click
+	 * @param time the amount of time to long click
+	 */
+
+	public void clickOnScreen(View view, boolean longClick, int time) {
+		if(view == null)
+			Assert.fail("View is null and can therefore not be clicked!");
+
+		float[] xyToClick = getClickCoordinates(view);
+		float x = xyToClick[0];
+		float y = xyToClick[1];
+
+		if(x == 0 || y == 0){
+			sleeper.sleepMini();
+			try {
+				view = viewFetcher.getIdenticalView(view);
+			} catch (Exception ignored){}
+
+			if(view != null){
+				xyToClick = getClickCoordinates(view);
+				x = xyToClick[0];
+				y = xyToClick[1];
+			}
+		}
+
+		if (longClick)
+			clickLongOnScreen(x, y, time, view);
+		else
+			clickOnScreen(x, y, view);
+	}	
+
+	/**
+	 * Returns click coordinates for the specified view.
+	 * 
+	 * @param view the view to get click coordinates from
+	 * @return click coordinates for a specified view
+	 */
+
+	private float[] getClickCoordinates(View view){
+		sleeper.sleep(MINI_WAIT);
+		int[] xyLocation = new int[2];
+		float[] xyToClick = new float[2];
+
+		view.getLocationOnScreen(xyLocation);
+
+		final int viewWidth = view.getWidth();
+		final int viewHeight = view.getHeight();
+		final float x = xyLocation[0] + (viewWidth / 2.0f);
+		float y = xyLocation[1] + (viewHeight / 2.0f);
+
+		xyToClick[0] = x;
+		xyToClick[1] = y;
+
+		return xyToClick;
+	}
+	
+	
+
+
+	/**
+	 * Long clicks on a specific {@link TextView} and then selects
+	 * an item from the context menu that appears. Will automatically scroll when needed.
+	 *
+	 * @param text the text that should be clicked on. The parameter <strong>will</strong> be interpreted as a regular expression.
+	 * @param index the index of the menu item that should be pressed
+	 */
+
+	public void clickLongOnTextAndPress(String text, int index)
+	{
+		clickOnText(text, true, 0, true, 0);
+		dialogUtils.waitForDialogToOpen(Timeout.getSmallTimeout(), true);
+		try{
+			inst.sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_DOWN);
+		}catch(SecurityException e){
+			Assert.fail("Can not press the context menu!");
+		}
+		for(int i = 0; i < index; i++)
+		{
+			sleeper.sleepMini();
+			inst.sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_DOWN);
+		}
+		inst.sendKeyDownUpSync(KeyEvent.KEYCODE_ENTER);
+	}
+
+	/**
+	 * Opens the menu and waits for it to open.
+	 */
+
+	private void openMenu(){
+		sleeper.sleepMini();
+
+		if(!dialogUtils.waitForDialogToOpen(MINI_WAIT, false)) {
+			try{
+				sender.sendKeyCode(KeyEvent.KEYCODE_MENU);
+				dialogUtils.waitForDialogToOpen(WAIT_TIME, true);
+			}catch(SecurityException e){
+				Assert.fail("Can not open the menu!");
+			}
+		}
+	}
+
+	/**
+	 * Clicks on a menu item with a given text.
+	 *
+	 * @param text the menu text that should be clicked on. The parameter <strong>will</strong> be interpreted as a regular expression.
+	 */
+
+	public void clickOnMenuItem(String text)
+	{
+		openMenu();
+		clickOnText(text, false, 1, true, 0);
+	}
+
+	/**
+	 * Clicks on a menu item with a given text.
+	 *
+	 * @param text the menu text that should be clicked on. The parameter <strong>will</strong> be interpreted as a regular expression.
+	 * @param subMenu true if the menu item could be located in a sub menu
+	 */
+
+	public void clickOnMenuItem(String text, boolean subMenu)
+	{
+		sleeper.sleepMini();
+
+		TextView textMore = null;
+		int [] xy = new int[2];
+		int x = 0;
+		int y = 0;
+
+		if(!dialogUtils.waitForDialogToOpen(MINI_WAIT, false)) {
+			try{
+				sender.sendKeyCode(KeyEvent.KEYCODE_MENU);
+				dialogUtils.waitForDialogToOpen(WAIT_TIME, true);
+			}catch(SecurityException e){
+				Assert.fail("Can not open the menu!");
+			}
+		}
+		boolean textShown = waiter.waitForText(text, 1, WAIT_TIME, true) != null;
+
+		if(subMenu && (viewFetcher.getCurrentViews(TextView.class, true).size() > 5) && !textShown){
+			for(TextView textView : viewFetcher.getCurrentViews(TextView.class, true)){
+				x = xy[0];
+				y = xy[1];
+				textView.getLocationOnScreen(xy);
+
+				if(xy[0] > x || xy[1] > y)
+					textMore = textView;
+			}
+		}
+		if(textMore != null)
+			clickOnScreen(textMore);
+
+		clickOnText(text, false, 1, true, 0);
+	}
+
+	/**
+	 * Clicks on an ActionBar item with a given resource id
+	 *
+	 * @param resourceId the R.id of the ActionBar item
+	 */
+
+	public void clickOnActionBarItem(int resourceId){
+		sleeper.sleep();
+		inst.invokeMenuActionSync(activityUtils.getCurrentActivity(), resourceId, 0);
+	}
+
+	/**
+	 * Clicks on an ActionBar Home/Up button.
+	 */
+
+	public void clickOnActionBarHomeButton() {
+		Activity activity = activityUtils.getCurrentActivity();
+		MenuItem homeMenuItem = null;
+
+		try {
+			Class<?> cls = Class.forName("com.android.internal.view.menu.ActionMenuItem");
+			Class<?> partypes[] = new Class[6];
+			partypes[0] = Context.class;
+			partypes[1] = Integer.TYPE;
+			partypes[2] = Integer.TYPE;
+			partypes[3] = Integer.TYPE;
+			partypes[4] = Integer.TYPE;
+			partypes[5] = CharSequence.class;
+			Constructor<?> ct = cls.getConstructor(partypes);
+			Object argList[] = new Object[6];
+			argList[0] = activity;
+			argList[1] = 0;
+			argList[2] = android.R.id.home;
+			argList[3] = 0;
+			argList[4] = 0;
+			argList[5] = "";
+			homeMenuItem = (MenuItem) ct.newInstance(argList);
+		} catch (Exception ex) {
+			Log.d(LOG_TAG, "Can not find methods to invoke Home button!");
+		}
+
+		if (homeMenuItem != null) {
+			try{
+				activity.getWindow().getCallback().onMenuItemSelected(Window.FEATURE_OPTIONS_PANEL, homeMenuItem);
+			}catch(Exception ignored) {}
+		}
+	}
+
+	/**
+	 * Clicks on a web element using the given By method.
+	 *
+	 * @param by the By object e.g. By.id("id");
+	 * @param match if multiple objects match, this determines which one will be clicked
+	 * @param scroll true if scrolling should be performed
+	 * @param useJavaScriptToClick true if click should be perfomed through JavaScript
+	 */
+
+	public void clickOnWebElement(By by, int match, boolean scroll, boolean useJavaScriptToClick){
+		WebElement webElement = null;
+		
+		if(useJavaScriptToClick){
+			webElement = waiter.waitForWebElement(by, match, Timeout.getSmallTimeout(), false);
+			if(webElement == null){
+				Assert.fail("WebElement with " + webUtils.splitNameByUpperCase(by.getClass().getSimpleName()) + ": '" + by.getValue() + "' is not found!");
+			}
+			webUtils.executeJavaScript(by, true);
+			return;
+		}
+		
+		WebElement webElementToClick = waiter.waitForWebElement(by, match, Timeout.getSmallTimeout(), scroll);
+		
+		if(webElementToClick == null){
+			if(match > 1) {
+				Assert.fail(match + " WebElements with " + webUtils.splitNameByUpperCase(by.getClass().getSimpleName()) + ": '" + by.getValue() + "' are not found!");
+			}
+			else {
+				Assert.fail("WebElement with " + webUtils.splitNameByUpperCase(by.getClass().getSimpleName()) + ": '" + by.getValue() + "' is not found!");
+			}
+		}
+		
+		clickOnScreen(webElementToClick.getLocationX(), webElementToClick.getLocationY(), null);
+	}
+
+
+	/**
+	 * Clicks on a specific {@link TextView} displaying a given text.
+	 *
+	 * @param regex the text that should be clicked on. The parameter <strong>will</strong> be interpreted as a regular expression.
+	 * @param longClick {@code true} if the click should be a long click
+	 * @param match the regex match that should be clicked on
+	 * @param scroll true if scrolling should be performed
+	 * @param time the amount of time to long click
+	 */
+
+	public void clickOnText(String regex, boolean longClick, int match, boolean scroll, int time) {
+		TextView textToClick = waiter.waitForText(regex, match, Timeout.getSmallTimeout(), scroll, true, false);
+
+		if (textToClick != null) {
+			clickOnScreen(textToClick, longClick, time);
+		}
+
+		else {
+
+			if(match > 1){
+				Assert.fail(match + " matches of text string: '" + regex +  "' are not found!");
+			}
+
+			else{
+				ArrayList<TextView> allTextViews = RobotiumUtils.removeInvisibleViews(viewFetcher.getCurrentViews(TextView.class, true));
+				allTextViews.addAll((Collection<? extends TextView>) webUtils.getTextViewsFromWebView());
+
+				for (TextView textView : allTextViews) {
+					Log.d(LOG_TAG, "'" + regex + "' not found. Have found: '" + textView.getText() + "'");
+				}
+				allTextViews = null;
+				Assert.fail("Text string: '" + regex + "' is not found!");
+			}
+		}
+	}
+
+
+	/**
+	 * Clicks on a {@code View} of a specific class, with a given text.
+	 *
+	 * @param viewClass what kind of {@code View} to click, e.g. {@code Button.class} or {@code TextView.class}
+	 * @param nameRegex the name of the view presented to the user. The parameter <strong>will</strong> be interpreted as a regular expression.
+	 */
+
+	public <T extends TextView> void clickOn(Class<T> viewClass, String nameRegex) {
+		T viewToClick = (T) waiter.waitForText(viewClass, nameRegex, 0, Timeout.getSmallTimeout(), true, true, false);
+
+		if (viewToClick != null) {
+			clickOnScreen(viewToClick);
+		} else {
+			ArrayList <T> allTextViews = RobotiumUtils.removeInvisibleViews(viewFetcher.getCurrentViews(viewClass, true));
+
+			for (T view : allTextViews) {
+				Log.d(LOG_TAG, "'" + nameRegex + "' not found. Have found: '" + view.getText() + "'");
+			}
+			Assert.fail(viewClass.getSimpleName() + " with text: '" + nameRegex + "' is not found!");
+		}
+	}
+
+	/**
+	 * Clicks on a {@code View} of a specific class, with a certain index.
+	 *
+	 * @param viewClass what kind of {@code View} to click, e.g. {@code Button.class} or {@code ImageView.class}
+	 * @param index the index of the {@code View} to be clicked, within {@code View}s of the specified class
+	 */
+
+	public <T extends View> void clickOn(Class<T> viewClass, int index) {
+		clickOnScreen(waiter.waitForAndGetView(index, viewClass));
+	}
+
+
+	/**
+	 * Clicks on a certain list line and returns the {@link TextView}s that
+	 * the list line is showing. Will use the first list it finds.
+	 *
+	 * @param line the line that should be clicked
+	 * @return a {@code List} of the {@code TextView}s located in the list line
+	 */
+
+	public ArrayList<TextView> clickInList(int line) {
+		return clickInList(line, 0, false, 0);
+	}
+
+	/**
+	 * Clicks on a certain list line on a specified List and
+	 * returns the {@link TextView}s that the list line is showing.
+	 *
+	 * @param line the line that should be clicked
+	 * @param index the index of the list. E.g. Index 1 if two lists are available
+	 * @return an {@code ArrayList} of the {@code TextView}s located in the list line
+	 */
+
+	public ArrayList<TextView> clickInList(int line, int index, boolean longClick, int time) {
+		final long endTime = SystemClock.uptimeMillis() + Timeout.getSmallTimeout();
+
+		int lineIndex = line - 1;
+		if(lineIndex < 0)
+			lineIndex = 0;
+
+		ArrayList<View> views = new ArrayList<View>();
+		final AbsListView absListView = waiter.waitForAndGetView(index, AbsListView.class);
+
+		if(absListView == null)
+			Assert.fail("ListView is null!");
+
+		while(lineIndex > absListView.getChildCount()){
+			final boolean timedOut = SystemClock.uptimeMillis() > endTime;
+			if (timedOut){
+				int numberOfLines = absListView.getChildCount();
+				Assert.fail("Can not click on line number " + line + " as there are only " + numberOfLines + " lines available");
+			}
+			sleeper.sleep();
+		}
+
+		View view = getViewOnListLine(absListView, index, lineIndex);
+
+		if(view != null){
+			views = viewFetcher.getViews(view, true);
+			views = RobotiumUtils.removeInvisibleViews(views);
+			clickOnScreen(view, longClick, time);
+		}
+		return RobotiumUtils.filterViews(TextView.class, views);
+	}
+
+	/**
+	 * Returns the view in the specified list line
+	 * 
+	 * @param absListView the ListView to use
+	 * @param index the index of the list. E.g. Index 1 if two lists are available
+	 * @param lineIndex the line index of the View
+	 * @return the View located at a specified list line
+	 */
+
+	private View getViewOnListLine(AbsListView absListView, int index, int lineIndex){
+		final long endTime = SystemClock.uptimeMillis() + Timeout.getSmallTimeout();
+		View view = absListView.getChildAt(lineIndex);
+
+		while(view == null){
+			final boolean timedOut = SystemClock.uptimeMillis() > endTime;
+			if (timedOut){
+				Assert.fail("View is null and can therefore not be clicked!");
+			}
+			
+			sleeper.sleep();
+			absListView = (AbsListView) viewFetcher.getIdenticalView(absListView);
+
+			if(absListView == null){
+				absListView = waiter.waitForAndGetView(index, AbsListView.class);
+			}
+			
+			view = absListView.getChildAt(lineIndex);
+		}
+		return view;
+	}
+}
+@#$
+package com.robotium.solo;
+
+/**
+ * Represents a conditional statement.<br/>
+ * Implementations may be used with {@link Solo#waitForCondition(Condition, int)}.
+ */
+public interface Condition {
+
+	/**
+	 * Should do the necessary work needed to check a condition and then return whether this condition is satisfied or not.
+	 * @return {@code true} if condition is satisfied and {@code false} if it is not satisfied
+	 */
+	public boolean isSatisfied();
+
+}
+@#$
+package com.robotium.solo;
+
+
+import android.app.Activity;
+import android.content.Context;
+import android.os.SystemClock;
+import android.view.ContextThemeWrapper;
+import android.view.View;
+import android.view.inputmethod.InputMethodManager;
+import android.widget.EditText;
+
+
+/**
+ * Contains the waitForDialogToClose() method.
+ * 
+ * @author Renas Reda, renas.reda@robotium.com
+ * 
+ */
+
+class DialogUtils {
+
+	private final ActivityUtils activityUtils;
+	private final ViewFetcher viewFetcher;
+	private final Sleeper sleeper;
+	private final static int TIMEOUT_DIALOG_TO_CLOSE = 1000;
+	private final int MINISLEEP = 200;
+
+	/**
+	 * Constructs this object.
+	 * 
+	 * @param activityUtils the {@code ActivityUtils} instance
+	 * @param viewFetcher the {@code ViewFetcher} instance
+	 * @param sleeper the {@code Sleeper} instance
+	 */
+
+	public DialogUtils(ActivityUtils activityUtils, ViewFetcher viewFetcher, Sleeper sleeper) {
+		this.activityUtils = activityUtils;
+		this.viewFetcher = viewFetcher;
+		this.sleeper = sleeper;
+	}
+
+
+	/**
+	 * Waits for a {@link android.app.Dialog} to close.
+	 *
+	 * @param timeout the amount of time in milliseconds to wait
+	 * @return {@code true} if the {@code Dialog} is closed before the timeout and {@code false} if it is not closed
+	 */
+
+	public boolean waitForDialogToClose(long timeout) {
+		waitForDialogToOpen(TIMEOUT_DIALOG_TO_CLOSE, false);
+		final long endTime = SystemClock.uptimeMillis() + timeout;
+
+		while (SystemClock.uptimeMillis() < endTime) {
+
+			if(!isDialogOpen()){
+				return true;
+			}
+			sleeper.sleep(MINISLEEP);
+		}
+		return false;
+	}
+
+
+
+	/**
+	 * Waits for a {@link android.app.Dialog} to open.
+	 *
+	 * @param timeout the amount of time in milliseconds to wait
+	 * @return {@code true} if the {@code Dialog} is opened before the timeout and {@code false} if it is not opened
+	 */
+
+	public boolean waitForDialogToOpen(long timeout, boolean sleepFirst) {
+		final long endTime = SystemClock.uptimeMillis() + timeout;
+		boolean dialogIsOpen = isDialogOpen();
+
+		if(sleepFirst)
+			sleeper.sleep();
+		
+		if(dialogIsOpen){
+			return true;
+		}
+
+		while (SystemClock.uptimeMillis() < endTime) {
+
+			if(isDialogOpen()){
+				return true;
+			}
+			sleeper.sleepMini();
+		}
+		return false;
+	}
+
+	/**
+	 * Checks if a dialog is open. 
+	 * 
+	 * @return true if dialog is open
+	 */
+
+	private boolean isDialogOpen(){
+		final Activity activity = activityUtils.getCurrentActivity(false);
+		final View[] views = viewFetcher.getWindowDecorViews();
+		View view = viewFetcher.getRecentDecorView(views);	
+		
+		if(!isDialog(activity, view)){
+			for(View v : views){
+				if(isDialog(activity, v)){
+					return true;
+				}
+			}
+		}
+		else {
+			return true;
+		}
+		return false;
+	}
+	
+	/**
+	 * Checks that the specified DecorView and the Activity DecorView are not equal.
+	 * 
+	 * @param activity the activity which DecorView is to be compared
+	 * @param decorView the DecorView to compare
+	 * @return true if not equal
+	 */
+	
+	private boolean isDialog(Activity activity, View decorView){
+		if(decorView == null || !decorView.isShown()){
+			return false;
+		}
+		Context viewContext = null;
+		if(decorView != null){
+			viewContext = decorView.getContext();
+		}
+		
+		if (viewContext instanceof ContextThemeWrapper) {
+			ContextThemeWrapper ctw = (ContextThemeWrapper) viewContext;
+			viewContext = ctw.getBaseContext();
+		}
+		Context activityContext = activity;
+		Context activityBaseContext = activity.getBaseContext();
+		return (activityContext.equals(viewContext) || activityBaseContext.equals(viewContext)) && (decorView != activity.getWindow().getDecorView());
+	}
+
+	/**
+	 * Hides the soft keyboard
+	 * 
+	 * @param shouldSleepFirst whether to sleep a default pause first
+	 * @param shouldSleepAfter whether to sleep a default pause after
+	 */
+
+	public void hideSoftKeyboard(EditText editText, boolean shouldSleepFirst, boolean shouldSleepAfter) {
+		Activity activity = activityUtils.getCurrentActivity(shouldSleepFirst);
+
+		InputMethodManager inputMethodManager = (InputMethodManager)  activity.getSystemService(Activity.INPUT_METHOD_SERVICE);
+
+		if(editText != null) {
+			inputMethodManager.hideSoftInputFromWindow(editText.getWindowToken(), 0);
+			return;
+		}
+		View focusedView = activity.getCurrentFocus();
+
+		if(!(focusedView instanceof EditText)) {
+			EditText freshestEditText = viewFetcher.getFreshestView(viewFetcher.getCurrentViews(EditText.class, true));
+			if(freshestEditText != null){
+				focusedView = freshestEditText;
+			}
+		}
+		if(focusedView != null) {
+			inputMethodManager.hideSoftInputFromWindow(focusedView.getWindowToken(), 0);
+		}
+		if(shouldSleepAfter){
+			sleeper.sleep();
+		}
+	}
+}
+@#$
+package com.robotium.solo;
+
+import java.nio.IntBuffer;
+import java.util.concurrent.CountDownLatch;
+import javax.microedition.khronos.egl.EGLConfig;
+import javax.microedition.khronos.opengles.GL10;
+import android.graphics.Bitmap;
+import android.opengl.GLES20;
+import android.opengl.GLSurfaceView;
+import android.opengl.GLSurfaceView.Renderer;
+import android.view.View;
+
+/**
+ * Used to wrap and replace the renderer to gain access to the gl context.  
+ * 
+ * @author Per-Erik Bergman, bergman@uncle.se
+ * 
+ */
+
+class GLRenderWrapper implements Renderer {
+
+	private Renderer renderer;
+	private int width;
+	private int height;
+	private final GLSurfaceView view;
+	private CountDownLatch latch;
+	private boolean takeScreenshot = true;
+	private int glVersion;
+
+	/**
+	 * Constructs this object.
+	 * 
+	 * @param view the current glSurfaceView
+	 * @param renderer the renderer to wrap
+	 * @param latch the count down latch
+	 */
+	
+	public GLRenderWrapper(GLSurfaceView view,
+			Renderer renderer, CountDownLatch latch) {
+		this.view = view;
+		this.renderer = renderer;
+		this.latch = latch;
+		
+		this.width = view.getWidth();
+		this.height = view.getHeight();
+		
+		Integer out = new Reflect(view).field("mEGLContextClientVersion")
+				.out(Integer.class);
+		if ( out != null ) {
+			this.glVersion = out.intValue();
+		} else {
+			this.glVersion = -1;
+			this.takeScreenshot = false;
+		}
+	}
+
+	@Override
+	/*
+	 * (non-Javadoc)
+	 * @see android.opengl.GLSurfaceView.Renderer#onSurfaceCreated(javax.microedition.khronos.opengles.GL10, javax.microedition.khronos.egl.EGLConfig)
+	 */
+	
+	public void onSurfaceCreated(GL10 gl, EGLConfig config) {
+		renderer.onSurfaceCreated(gl, config);
+	}
+
+	@Override
+	/*
+	 * (non-Javadoc)
+	 * @see android.opengl.GLSurfaceView.Renderer#onSurfaceChanged(javax.microedition.khronos.opengles.GL10, int, int)
+	 */
+	
+	public void onSurfaceChanged(GL10 gl, int width, int height) {
+		this.width = width;
+		this.height = height;
+		renderer.onSurfaceChanged(gl, width, height);
+	}
+
+	@Override
+	/*
+	 * (non-Javadoc)
+	 * @see android.opengl.GLSurfaceView.Renderer#onDrawFrame(javax.microedition.khronos.opengles.GL10)
+	 */
+	
+	public void onDrawFrame(GL10 gl) {
+		renderer.onDrawFrame(gl);
+		if (takeScreenshot) {
+			Bitmap screenshot = null;
+
+			if (glVersion >= 2) {
+				screenshot = savePixels(0, 0, width, height);
+			} else {
+				screenshot = savePixels(0, 0, width, height, gl);
+			}
+
+			new Reflect(view).field("mDrawingCache").type(View.class)
+					.in(screenshot);
+			latch.countDown();
+			takeScreenshot = false;
+		}
+	}
+
+	/**
+	 * Tell the wrapper to take a screen shot 
+	 */
+	
+	public void setTakeScreenshot() {
+		takeScreenshot = true;
+	}
+
+	/**
+	 * Set the count down latch 
+	 */
+
+	public void setLatch(CountDownLatch latch) {
+		this.latch = latch;
+	}
+
+	/**
+	 * Extract the bitmap from OpenGL 
+	 * 
+	 * @param x the start column
+	 * @param y the start line
+	 * @param w the width of the bitmap
+	 * @param h the height of the bitmap
+	 */
+	
+	private Bitmap savePixels(int x, int y, int w, int h) {
+		int b[] = new int[w * (y + h)];
+		int bt[] = new int[w * h];
+		IntBuffer ib = IntBuffer.wrap(b);
+		ib.position(0);
+		GLES20.glReadPixels(x, 0, w, y + h, GLES20.GL_RGBA,
+				GLES20.GL_UNSIGNED_BYTE, ib);
+
+		for (int i = 0, k = 0; i < h; i++, k++) {
+			// remember, that OpenGL bitmap is incompatible with Android bitmap
+			// and so, some correction need.
+			for (int j = 0; j < w; j++) {
+				int pix = b[i * w + j];
+				int pb = (pix >> 16) & 0xff;
+				int pr = (pix << 16) & 0x00ff0000;
+				int pix1 = (pix & 0xff00ff00) | pr | pb;
+				bt[(h - k - 1) * w + j] = pix1;
+			}
+		}
+
+		Bitmap sb = Bitmap.createBitmap(bt, w, h, Bitmap.Config.ARGB_8888);
+		return sb;
+	}
+
+	/**
+	 * Extract the bitmap from OpenGL 
+	 * 
+	 * @param x the start column
+	 * @param y the start line
+	 * @param w the width of the bitmap
+	 * @param h the height of the bitmap
+	 * @param gl the current GL reference
+	 */
+	
+	private static Bitmap savePixels(int x, int y, int w, int h, GL10 gl) {
+		int b[] = new int[w * (y + h)];
+		int bt[] = new int[w * h];
+		IntBuffer ib = IntBuffer.wrap(b);
+		ib.position(0);
+		gl.glReadPixels(x, 0, w, y + h, GL10.GL_RGBA, GL10.GL_UNSIGNED_BYTE, ib);
+
+		for (int i = 0, k = 0; i < h; i++, k++) {
+			// remember, that OpenGL bitmap is incompatible with Android bitmap
+			// and so, some correction need.
+			for (int j = 0; j < w; j++) {
+				int pix = b[i * w + j];
+				int pb = (pix >> 16) & 0xff;
+				int pr = (pix << 16) & 0x00ff0000;
+				int pix1 = (pix & 0xff00ff00) | pr | pb;
+				bt[(h - k - 1) * w + j] = pix1;
+			}
+		}
+
+		Bitmap sb = Bitmap.createBitmap(bt, w, h, Bitmap.Config.ARGB_8888);
+		return sb;
+	}
+
+}
