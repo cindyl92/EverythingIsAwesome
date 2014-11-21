@@ -7,6 +7,9 @@ using System.IO;
 using UnityEngine;
 namespace  AssemblyCSharpvs
 {
+	//This class reads the file paths text file created by the decomposer, calls the Custom Parser with the code file created by the decomposer
+	//then calls the Japarser API to get JSON data which it parses to return the coupling between classes in the repo. Finally, it combines the 
+	//coupling data with the lines of code and comment density from the Custom Parser and passes it to BuildingHeight.cs to render
 	public class JSONParser
 	{
 		
@@ -42,15 +45,11 @@ namespace  AssemblyCSharpvs
 		public string JSONRequester (string filePath){
 			
 			string japarserData = "";
-			//Debug.Log ("about to request" + filePath);
 			
 			try{
 				
 				string url = "http://japarser.appspot.com/src?url=" + filePath;
-				//string url = "http://japarser.appspot.com/src?url=https://github.com/psaravan/JamsMusicPlayer/blob/master/" + filePath;
-				
-				//this url is temporary for testing the robotium repo until the text file has been fixed with the html file path
-				// string url = "http://japarser.appspot.com/src?url=https://github.com/RobotiumTech/robotium/blob/master/" + filePath;
+		
 				//Make the request
 				WebRequest request = WebRequest.Create (url);
 				
@@ -67,8 +66,6 @@ namespace  AssemblyCSharpvs
 				
 				// Read the content.
 				japarserData = reader.ReadToEnd ();
-				
-				//Debug.Log("Successfully retreived data for: "+filePath);
 				
 				// Clean up the streams and the response.
 				reader.Close ();
@@ -140,7 +137,6 @@ namespace  AssemblyCSharpvs
 						//otherwise add it to the array and init its count to 1
 					}else{
 						coupledClasses.Add(returnType);
-						Debug.Log ("RETURNTYPE COUPLING");
 						coupledCounts.Add(1);
 					}
 				}
@@ -164,7 +160,6 @@ namespace  AssemblyCSharpvs
 						//otherwise add it to the array and init its count to 1
 					}else{
 						coupledClasses.Add(subclassType);
-						Debug.Log ("SUBCLASS COUPLING");
 						coupledCounts.Add(1);
 					}
 				}
@@ -188,7 +183,6 @@ namespace  AssemblyCSharpvs
 						//otherwise add it to the array and init its count to 1
 					}else{
 						coupledClasses.Add(interfaceType);
-						Debug.Log ("INTERFACE COUPLING");
 						coupledCounts.Add(1);
 					}
 				}
@@ -213,8 +207,6 @@ namespace  AssemblyCSharpvs
 			}  
 			
 			string typeName = N ["qualifiedTypeName"];
-			Debug.Log ("typeName is: " + typeName);
-			Debug.Log ("classname is: " + className);
 			
 			string packageName = "unspecified";
 			
