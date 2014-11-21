@@ -46,12 +46,12 @@ namespace  AssemblyCSharpvs
 			//Debug.Log ("about to request" + filePath);
 			
 			try{
-				
-				string url = "http://japarser.appspot.com/src?url=" + filePath;
-				//string url = "http://japarser.appspot.com/src?url=https://github.com/psaravan/JamsMusicPlayer/blob/master/" + filePath;
+				//string url = "http://japarser.appspot.com/src?url=" + filePath;
+				string url = "http://japarser.appspot.com/src?url=https://github.com/psaravan/JamsMusicPlayer/blob/master/" + filePath;
 				
 				//this url is temporary for testing the robotium repo until the text file has been fixed with the html file path
-				// string url = "http://japarser.appspot.com/src?url=https://github.com/RobotiumTech/robotium/blob/master/" + filePath;
+				//string url = "http://japarser.appspot.com/src?url=https://github.com/RobotiumTech/robotium/blob/master/" + filePath;
+
 				//Make the request
 				WebRequest request = WebRequest.Create (url);
 				
