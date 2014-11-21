@@ -7,7 +7,10 @@ using System.IO;
 using UnityEngine;
 namespace  AssemblyCSharpvs
 {
-	public class JSONParser//:ScriptableObject //ScriptableObject is a bit easier to deal with in unit tests than MonoBehavior
+	//This class reads the file paths text file created by the decomposer, calls the Custom Parser with the code file created by the decomposer
+	//then calls the Japarser API to get JSON data which it parses to return the coupling between classes in the repo. Finally, it combines the 
+	//coupling data with the lines of code and comment density from the Custom Parser and passes it to BuildingHeight.cs to render
+	public class JSONParser
 	{
 		
 		string stringProbe;
@@ -24,8 +27,7 @@ namespace  AssemblyCSharpvs
 					while (sr.Peek() >= 0)
 					{
 						stringProbe = sr.ReadLine(); //reads in the next line from text
-						filePathsArray.Add (stringProbe);
-						//Debug.Log("read "+filePath); 
+						filePathsArray.Add (stringProbe); 
 					}
 				}
 			}
@@ -43,14 +45,10 @@ namespace  AssemblyCSharpvs
 		public string JSONRequester (string filePath){
 			
 			string japarserData = "";
-			//Debug.Log ("about to request" + filePath);
 			
 			try{
-				//string url = "http://japarser.appspot.com/src?url=" + filePath;
-				string url = "http://japarser.appspot.com/src?url=https://github.com/psaravan/JamsMusicPlayer/blob/master/" + filePath;
 				
-				//this url is temporary for testing the robotium repo until the text file has been fixed with the html file path
-				//string url = "http://japarser.appspot.com/src?url=https://github.com/RobotiumTech/robotium/blob/master/" + filePath;
+				string url = "http://japarser.appspot.com/src?url=" + filePath;
 
 				//Make the request
 				WebRequest request = WebRequest.Create (url);
@@ -68,8 +66,6 @@ namespace  AssemblyCSharpvs
 				
 				// Read the content.
 				japarserData = reader.ReadToEnd ();
-				
-				//Debug.Log("Successfully retreived data for: "+filePath);
 				
 				// Clean up the streams and the response.
 				reader.Close ();
@@ -125,8 +121,8 @@ namespace  AssemblyCSharpvs
 			for (int j = 0; j< numberOfMethods; j++)
 			{
 				string returnType = N["methods"][j]["returnName"].Value;
-				//If the type of the field is not equal to the className and it is another class in the project, then we have coupling
-				
+
+				//If the type of the returnType is not equal to the className and it is another class in the project, then we have coupling
 				if (returnType != className && allTypes.Contains(returnType)) 
 				{
 					
@@ -141,7 +137,6 @@ namespace  AssemblyCSharpvs
 						//otherwise add it to the array and init its count to 1
 					}else{
 						coupledClasses.Add(returnType);
-						Debug.Log ("RETURNTYPE COUPLING");
 						coupledCounts.Add(1);
 					}
 				}
@@ -152,7 +147,8 @@ namespace  AssemblyCSharpvs
 			for (int k = 0; k< numberOfSubclasses; k++)
 			{
 				string subclassType = N["extendsClasses"][k]["name"].Value;
-				//If the type of the field is not equal to the className and it is another class in the project, then we have coupling
+
+				//If the type of the superclass is not equal to the className and it is another class in the project, then we have coupling
 				if (subclassType != className && allTypes.Contains(subclassType)) 
 				{
 					//If the class has a coupling instance already, increase the couple count
@@ -164,7 +160,6 @@ namespace  AssemblyCSharpvs
 						//otherwise add it to the array and init its count to 1
 					}else{
 						coupledClasses.Add(subclassType);
-						Debug.Log ("SUBCLASS COUPLING");
 						coupledCounts.Add(1);
 					}
 				}
@@ -174,7 +169,8 @@ namespace  AssemblyCSharpvs
 			for (int l = 0; l< numberOfInterfaces; l++)
 			{
 				string interfaceType = N["implementsInterfaces"][l]["name"].Value;
-				//If the type of the field is not equal to the className and it is another class in the project, then we have coupling
+
+				//If the type of the interface is not equal to the className and it is another class in the project, then we have coupling
 				if (interfaceType != className && allTypes.Contains(interfaceType)) 
 				{
 					//If the class has a coupling instance already, increase the couple count
@@ -183,10 +179,10 @@ namespace  AssemblyCSharpvs
 						int value = (int) coupledCounts[index];
 						if (index >= 0)
 							coupledCounts[index] = value++;
+
 						//otherwise add it to the array and init its count to 1
 					}else{
 						coupledClasses.Add(interfaceType);
-						Debug.Log ("INTERFACE COUPLING");
 						coupledCounts.Add(1);
 					}
 				}
@@ -211,8 +207,6 @@ namespace  AssemblyCSharpvs
 			}  
 			
 			string typeName = N ["qualifiedTypeName"];
-			Debug.Log ("typeName is: " + typeName);
-			Debug.Log ("classname is: " + className);
 			
 			string packageName = "unspecified";
 			
@@ -272,8 +266,7 @@ namespace  AssemblyCSharpvs
 			
 			//Get all the class names
 			ArrayList allClasses = this.getAllClassNames(filePathsArray);
-			
-			//ArrayList allResults = new ArrayList ();
+
 			string[,] allResults = new string[allClasses.Count,6];
 			
 			for (int i = 0; i<filePathsArray.Count; i++) {
@@ -294,11 +287,11 @@ namespace  AssemblyCSharpvs
 		}
 		
 		void Start() {
-			
-			//ArrayList mockAllResults = this.getAllResults ("roboFilePathsTimes6.txt", "roboCodeTimes6.txt");
+
+			//Here are three test files you can use to test the components
 			string[,] mockAllResults = this.getAllResults ("mockFilePaths.txt", "mockJavaCode.txt");
-			//ArrayList mockAllResults = this.getAllResults ("javaPaths.txt", "javaText.txt");
-			//ArrayList mockAllResults = this.getAllResults ("testPaths.txt", "testCode.txt");
+			//string[,] mockAllResults = this.getAllResults ("javaPaths.txt", "javaText.txt");
+			//string[,] mockAllResults = this.getAllResults ("testPaths.txt", "testCode.txt");
 			
 			for (int i = 0; i< mockAllResults.GetLength(0); i++){
 				

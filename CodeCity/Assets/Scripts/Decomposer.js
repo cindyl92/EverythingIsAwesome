@@ -46,6 +46,10 @@ function determineBranch() {
 // Starts a coroutine to begin searching with the repository URL.
 // Writes to files only when the decomposition is complete.
 function decompose () {
+  var starter : Component;
+  var camera = GameObject.Find("Main Camera");
+  starter = camera.GetComponent("Starter");
+  starter.SendMessage("InProgress");
   yield StartCoroutine(search(url + token));
   writeFiles();
 }
