@@ -9,7 +9,8 @@ namespace  AssemblyCSharpvs
 		public GameObject directionalLight;
 		
 		string[,] javaClasses;
-		private ArrayList arrayBuildingLabels = new ArrayList();
+		ArrayList arrayBuildingLabels = new ArrayList();
+		bool rotationFlag = true;
 		
 		//Cindy: this is how you call the JSONParser
 		//JSONParser parser = ScriptableObject.CreateInstance ("JSONParser");
@@ -60,6 +61,11 @@ namespace  AssemblyCSharpvs
 				buildingRigidBody.isKinematic = true;
 				
 				GameObject clone = new GameObject("className");
+
+				Rigidbody cloneRigidBody = clone.AddComponent<Rigidbody>();
+				
+				cloneRigidBody.useGravity = false;
+				cloneRigidBody.isKinematic = true;
 				
 				TextMesh buildingLabel = clone.AddComponent<TextMesh>();
 				buildingLabel.transform.position = new Vector3(positions[x,0], 2*(heights[x]/2 + 0.5f), positions[x,1]);
@@ -299,11 +305,22 @@ namespace  AssemblyCSharpvs
 		}
 		
 		void Update () {
-			//foreach (TextMesh b in arrayBuildingLabels) {
-			//someTextMesh.transform.rotation = Camera.main.transform.rotation
-			// b.transform.rotation = Camera.main.transform.rotation;
 			
-			//}
+			if (mainCamera.camera.enabled) {
+				if (!rotationFlag){
+					foreach(TextMesh bl in arrayBuildingLabels){
+						bl.transform.rotation = Quaternion.AngleAxis(15, Vector3.right);
+					}
+					rotationFlag = !rotationFlag;
+				}
+			}else{
+				if (rotationFlag){
+					foreach(TextMesh bl in arrayBuildingLabels){
+						bl.transform.rotation = Quaternion.AngleAxis(90, Vector3.right);
+					}
+					rotationFlag = !rotationFlag;
+				}
+			}
 		}
 	}
 }
