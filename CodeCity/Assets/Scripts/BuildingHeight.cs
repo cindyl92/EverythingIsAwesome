@@ -4,20 +4,19 @@ using System.Collections;
 namespace  AssemblyCSharpvs
 {
 	public class BuildingHeight : MonoBehaviour {
-		//public GameObject plane;
 		public GameObject mainCamera;
 		public GameObject directionalLight;
-		
+
 		string[,] javaClasses;
-		ArrayList arrayBuildingLabels = new ArrayList();
+		//ArrayList arrayBuildingLabels = new ArrayList();
 		bool rotationFlag = true;
 		
 		//Cindy: this is how you call the JSONParser
 		//JSONParser parser = ScriptableObject.CreateInstance ("JSONParser");
 		//ArrayList allResults = parser.getAllResults ("mockFilePaths.txt", "mockJavaCode.txt");
-		
-		// input format
+
 		// Class name, #LOC, coupled class name, # instances of couplings, comment density, package
+
 		/*string[,] javaClasses = new string[,] {{"ClassA", "120", "ClassC", "123", "10", "PackageA"},
 			{"ClassB", "342", "ClassD", "324", "50", "PackageA"} ,
 			{"ClassC", "13", "ClassA", "105", "90", "PackageA"} ,
@@ -25,7 +24,8 @@ namespace  AssemblyCSharpvs
 			{"ClassE", "5", "ClassF", "100", "55", "PackageA"} ,
 			{"ClassF", "150", "ClassE", "33", "50", "PackageA"} ,
 			{"ClassG", "440", "ClassA", "112", "5", "PackageA"}} ;*/
-		
+
+		private ArrayList arrayBuildingLabels = new ArrayList();
 		int numBuildings;
 		
 		float[] bases;
@@ -34,7 +34,11 @@ namespace  AssemblyCSharpvs
 		
 		float[,] positions;
 		int[,] couplings;
-		
+
+		int[] packages;
+		int numPackages;
+		string[] packageNames;
+
 		ArrayList allBuildings = new ArrayList();
 		
 		void Start () {
@@ -43,16 +47,34 @@ namespace  AssemblyCSharpvs
 			// mock file: "mockFilePaths.txt", "mockJavaCode.txt"
 			// Robotium: "roboFilePaths.txt", "roboCode.txt"
 			// jams music: "javaPaths.txt", "javaText.txt"
-			
-			float planeX = 0;
-			float planeY = 0;
-			float planeZ = 0;
-			
+
+			positions = new float[numBuildings,2];
+
 			numBuildings = javaClasses.GetLength(0);
-			setPositions (javaClasses);
-			setBuildingDetails (javaClasses);
-			findCouplings (javaClasses);
-			
+			findPackages ();
+			findCouplings ();
+			setBuildingDetails ();
+
+			float initialX = 0;
+			int classOrder = 0;
+			numPackages++;
+			Debug.Log ("start - numPackages = " + numPackages);
+
+			positions = new float[numBuildings,2];
+			for (int a = 0; a < numPackages; a++) {
+				Debug.Log("set positions for each pacakge: "+packageNames[a]);
+				Debug.Log ("setPositions("+classOrder+", "+initialX+", "+packages[a]+")");
+
+				int numFirstRow = setPositions(classOrder, initialX, packages[a]);
+
+				if (numFirstRow == 1 && packages[a] == 1){
+					initialX += (float)numFirstRow * 3;
+				} else {
+					initialX += (float)(numFirstRow + 2) * 3;
+				}
+				classOrder += packages[a];
+			}
+
 			// Instantiate example from : http://docs.unity3d.com/Manual/InstantiatingPrefabs.html
 			// instantiate building objects and apply building position, scale (height and bases), and colour
 			for (int x = 0; x < numBuildings; x++) {
@@ -83,46 +105,20 @@ namespace  AssemblyCSharpvs
 				allBuildings.Add (building);
 				//use: http://forum.unity3d.com/threads/make-textmesh-face-camera.251840/ after scripting the camera
 				//someTextMesh.transform.rotation = Camera.main.transform.rotation
-				
+
+				Debug.Log("start - positions: "+javaClasses[x,0]+"("+positions[x,0]+","+positions[x,1]+")");
+
 				building.transform.position = new Vector3(positions[x,0], heights[x]/2 + 0.5f, positions[x,1]);
 				building.transform.localScale += new Vector3 (bases[x], heights[x], bases[x]);
 				building.renderer.material.color = colours[x];
-				
-				if (planeX < positions[x,0]){
-					planeX = positions[x,0];
-				}
-				
-				if (planeY < heights[x]){
-					planeY = heights[x];
-				}
-				
-				if (planeZ < positions[x,1]){
-					planeZ = positions[x,1];
-				}
 			}
 			
 			drawLines ();
-			
-			if (planeX == 0){ planeX = 15; }
-			
-			// resize and replace plane to cover all the buildings
-			// JONATHAN EDIT: I commented this out (since I don't think we need a plane. correct me if i'm wrong)
-			// plane.transform.localScale = new Vector3(planeX/5, 0, planeZ/5);
-			// plane.transform.position = new Vector3(planeX/2, 0, planeZ/2);
-			
-			//Debug.Log("Max X = "+ planeX);
-			//Debug.Log("Max Y = "+ planeY);
-			//Debug.Log("Max Z = "+ planeZ);
-			
-			
-			
-			// place main camera and directional light to show all the buildings
-			mainCamera.transform.position = new Vector3 (planeX / 2, planeY / 2, -planeY);
-			directionalLight.transform.position = new Vector3 (planeX / 2, planeY - 10, -10);
+
 		}
-		
+
 		// Set buiding bases, heights, colours, and positions
-		void setBuildingDetails (string[,] javaClasses) {
+		void setBuildingDetails () {
 			
 			// initialize float/color arrays
 			bases = new float[numBuildings];
@@ -154,10 +150,7 @@ namespace  AssemblyCSharpvs
 		
 		void setColours (int x) {
 			int commentDensity = int.Parse(javaClasses[x,4]);
-			float colorPercent = (float)(commentDensity * 0.01);
-			Color32 color = new Color (0.2F, 0.3F, 0.4F, colorPercent);
-			
-			//colours [x] = color;
+
 			if(commentDensity < 0 || commentDensity > 100){
 				Debug.Log("invalid comment density: " +commentDensity+ ", class: " +javaClasses[x,0]);
 				
@@ -175,37 +168,59 @@ namespace  AssemblyCSharpvs
 		}	
 		
 		// set building positions based on coupling relations and save them into 2d array - positions[,]
-		void setPositions(string[,] javaClasses){
-			positions = new float[numBuildings,2];
+		int setPositions(int classOrder, float initX, int numClasses){
 			
-			int numFirstRow = (int) Mathf.Ceil (numBuildings / 4f);
-			//Debug.Log ("numBuildings: " + numBuildings);
-			//Debug.Log ("numFirstRow: " + numFirstRow);
-			
-			for (int x = 0; x < numFirstRow; x++) {
-				positions[x,0] = x * 3;
-				positions[x,1] = 0;
-				
-				int secondAxisPosition = x + numFirstRow;
-				positions[secondAxisPosition,0] = 0;
-				positions[secondAxisPosition,1] = x * 3 + 3;
-				
-				int thirdAxisPosition = x + 2 * numFirstRow;
-				positions[thirdAxisPosition,0] = x * 3 + 3;
-				positions[thirdAxisPosition,1] = numFirstRow * 3;
-				
-				int fourthAxisPosition = x + 3 * numFirstRow;
-				if (fourthAxisPosition < numBuildings) {
-					positions[fourthAxisPosition,0] = numFirstRow * 3;
-					positions[fourthAxisPosition,1] = (numFirstRow - x -1) * 3;
+			int numFirstRow = (int) Mathf.Ceil (numClasses / 4f);
+
+			int i = 0;
+			Debug.Log ("classorder + numFirstRow: " + (numFirstRow + classOrder));
+			for (int x = classOrder; x < (numFirstRow + classOrder); x++) {
+				Debug.Log("set positions - x = "+x);
+				Debug.Log("setPositions");
+
+				//First side
+				if (x < (numClasses + classOrder)) {
+					Debug.Log("set positions -1st x = "+x);
+					positions[x,0] = i * 3 + initX;
+					positions[x,1] = 0;
+					Debug.Log(javaClasses[x,0]+" - ("+positions[x,0]+","+positions[x,1]+")");
+				} else {
+					break;
 				}
-				
+
+				//Second side
+				int secondAxisPosition = x + numFirstRow;
+				if (secondAxisPosition < (numClasses + classOrder)) {
+					Debug.Log("set positions -2nd x = "+secondAxisPosition);
+					positions[secondAxisPosition,0] = 0 + initX;
+					positions[secondAxisPosition,1] = i * 3 + 3;
+					Debug.Log(javaClasses[secondAxisPosition,0]+" - ("+positions[secondAxisPosition,0]+","+positions[secondAxisPosition,1]+")");
+				}
+
+				//Third side
+				int thirdAxisPosition = x + 2 * numFirstRow;
+				if (thirdAxisPosition < (numClasses + classOrder)) {
+					Debug.Log("set positions -3rd x = "+thirdAxisPosition);
+					positions[thirdAxisPosition,0] = i * 3 + 3 + initX;
+					positions[thirdAxisPosition,1] = numFirstRow * 3;
+					Debug.Log(javaClasses[thirdAxisPosition,0]+" - ("+positions[thirdAxisPosition,0]+","+positions[thirdAxisPosition,1]+")");
+				}
+
+				//Fourth side
+				int fourthAxisPosition = x + 3 * numFirstRow;
+				if (fourthAxisPosition < (numClasses + classOrder)) {
+					Debug.Log("set positions -4th x = "+fourthAxisPosition);
+					positions[fourthAxisPosition,0] = numFirstRow * 3 + initX;
+					positions[fourthAxisPosition,1] = (numFirstRow - i -1) * 3;
+					Debug.Log(javaClasses[fourthAxisPosition,0]+" - ("+positions[fourthAxisPosition,0]+","+positions[fourthAxisPosition,1]+")");
+				}		
+				i++;
 			}
+			return numFirstRow;
 		}
 		
 		// find couplings and save them into 2d array - couplings[,]
-		void findCouplings(string[,] javaClasses){
-			Debug.Log ("Find couplings");
+		void findCouplings(){
 			couplings = new int[numBuildings,2];
 			for (int x = 0; x < numBuildings; x++) {
 				couplings[x,0] = -1;
@@ -213,16 +228,40 @@ namespace  AssemblyCSharpvs
 				if(javaClasses[x,2] != "no coupling"){
 					for (int y = 0; y < x; y++) {
 						if (javaClasses[y,0] == javaClasses[x,1]) {
+							Debug.Log("Coupling - "+ javaClasses[x,0]+", "+javaClasses[x,1]);
 							couplings[x,0] = x;
 							couplings[x,1] = y;
-							Debug.Log("Coupling - "+ javaClasses[x,0]+", "+javaClasses[x,1]);
 							break;	
 						}
 					}
 				}
 			}
 		}
-		
+
+		void findPackages(){
+			packages = new int[100];
+			packageNames = new string[100];
+			numPackages = 0;
+			string packageName = javaClasses[0, 5];
+
+			for (int x = 0; x < numBuildings; x++) {
+				if (x == 0) {
+					packageNames[x] = javaClasses[x,5];
+					packages[x] = 1;
+
+				} else if (packageNames[numPackages] == javaClasses[x,5]){
+					packages[numPackages]++;
+
+				} else {
+					numPackages++;
+					packageNames[numPackages] = javaClasses[x,5];
+					packages[numPackages] = 1;
+
+				}
+				Debug.Log("Package #: "+numPackages+", package name: "+packageNames[numPackages]+", number of classes: "+packages[numPackages]);
+			}
+		}
+	
 		void drawLines() {
 			for (int i = 0; i<couplings.GetLength(0); i++) {
 				
@@ -291,14 +330,7 @@ namespace  AssemblyCSharpvs
 						lineRenderer.SetPosition (0, parentPos);
 						lineRenderer.SetPosition (1, childPos);
 					}	
-					
-					
-					
-					
-					
-					
-					
-					
+
 				}
 				
 			}
