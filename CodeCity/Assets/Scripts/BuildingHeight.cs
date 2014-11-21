@@ -42,8 +42,10 @@ namespace  AssemblyCSharpvs
 		ArrayList allBuildings = new ArrayList();
 		
 		void Start () {
+			mainCamera = GameObject.Find("Main Camera");
+			directionalLight = GameObject.Find("Directional light");
 			JSONParser parser = new JSONParser();
-			javaClasses = parser.getAllResults("roboFilePaths.txt", "roboCode.txt");
+			javaClasses = parser.getAllResults("Temp/javaPaths.txt", "Temp/javaText.txt");
 			// mock file: "mockFilePaths.txt", "mockJavaCode.txt"
 			// Robotium: "roboFilePaths.txt", "roboCode.txt"
 			// jams music: "javaPaths.txt", "javaText.txt"

@@ -47,11 +47,11 @@ namespace  AssemblyCSharpvs
 			
 			try{
 				
-				//string url = "http://japarser.appspot.com/src?url=" + filePath;
+				string url = "http://japarser.appspot.com/src?url=" + filePath;
 				//string url = "http://japarser.appspot.com/src?url=https://github.com/psaravan/JamsMusicPlayer/blob/master/" + filePath;
 				
 				//this url is temporary for testing the robotium repo until the text file has been fixed with the html file path
-				string url = "http://japarser.appspot.com/src?url=https://github.com/RobotiumTech/robotium/blob/master/" + filePath;
+				// string url = "http://japarser.appspot.com/src?url=https://github.com/RobotiumTech/robotium/blob/master/" + filePath;
 				//Make the request
 				WebRequest request = WebRequest.Create (url);
 				
@@ -211,12 +211,17 @@ namespace  AssemblyCSharpvs
 			}  
 			
 			string typeName = N ["qualifiedTypeName"];
-			//Debug.Log ("typeName is: " + typeName);
+			Debug.Log ("typeName is: " + typeName);
+			Debug.Log ("classname is: " + className);
 			
 			string packageName = "unspecified";
 			
 			if (typeName != null) {
-				packageName = typeName.Substring (0, typeName.Length - (className.Length + 1));
+				if (typeName.Length <= className.Length) {
+					packageName = "no package";
+				} else {
+					packageName = typeName.Substring (0, typeName.Length - (className.Length + 1));
+				}
 			}
 			
 			ArrayList result = new ArrayList();
