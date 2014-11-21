@@ -42,10 +42,7 @@ namespace  AssemblyCSharpvs
 			directionalLight = GameObject.Find("Directional light");
 
 			JSONParser parser = new JSONParser();
-			javaClasses = parser.getAllResults("javaPaths.txt", "javaText.txt");
-			// mock file: "mockFilePaths.txt", "mockJavaCode.txt"
-			// Robotium: "roboFilePaths.txt", "roboCode.txt"
-			// jams music: "javaPaths.txt", "javaText.txt"
+			javaClasses = parser.getAllResults("Temp/javaPaths.txt", "Temp/javaText.txt");
 
 			positions = new float[numBuildings,2];
 
